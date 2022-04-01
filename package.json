@@ -1,0 +1,36 @@
+{
+  "name": "pino-roll",
+  "version": "0.0.1",
+  "description": "A Pino transport that automatically rolls your log files",
+  "main": "pino-roll.js",
+  "scripts": {
+    "dev": "tap -w -R spec",
+    "prepare": "husky install",
+    "test": "standard | snazzy && tap",
+    "test-ci": "standard | snazzy && tap --coverage-report=lcovonly"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/feugy/pino-roll.git"
+  },
+  "keywords": [
+    "pino",
+    "transport"
+  ],
+  "author": "Damien Simonin Feugas <damien.feugas@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "sonic-boom": "^2.6.0"
+  },
+  "devDependencies": {
+    "date-fns": "^2.28.0",
+    "husky": "^7.0.4",
+    "pino": "^7.9.2",
+    "snazzy": "^9.0.0",
+    "standard": "^17.0.0-2",
+    "tap": "^16.0.1"
+  },
+  "tsd": {
+    "directory": "./test/types"
+  }
+}
