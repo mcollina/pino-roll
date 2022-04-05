@@ -22,7 +22,7 @@ test('parseSize()', async ({ equal, throws }) => {
   throws(() => parseSize('null'), 'throws on non parseable string')
 })
 
-test('parseFrequency()', async ({ same }) => {
+test('parseFrequency()', async ({ same, throws }) => {
   const today = new Date()
 
   same(parseFrequency(), null, 'returns null on empty input')
@@ -42,6 +42,7 @@ test('parseFrequency()', async ({ same }) => {
     { frequency: custom, next: Date.now() + custom },
     'supports custom frequency and does not return start'
   )
+  throws(() => parseFrequency('null'), 'throws on non parseable string')
 })
 
 test('buildFileName()', async ({ equal, throws }) => {

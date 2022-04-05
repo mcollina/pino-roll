@@ -39,8 +39,6 @@ const { buildFileName, detectLastNumber, parseSize, parseFrequency } = require('
  * @returns {SonicBoom} the Sonic boom steam, usabled as Pino transport.
  */
 module.exports = async function ({ file, size, frequency, extension, ...opts } = {}) {
-  // TODO throw on unparseable/no/partial input
-
   let frequencySpec = parseFrequency(frequency)
 
   let number = await detectLastNumber(file, frequencySpec?.start)
@@ -50,7 +48,11 @@ module.exports = async function ({ file, size, frequency, extension, ...opts } =
 
   const destination = new SonicBoom({ ...opts, dest: buildFileName(file, number, extension) })
 
+  let rollTimeout
   if (frequencySpec) {
+    destination.once('close', () => {
+      clearTimeout(rollTimeout)
+    })
     scheduleRoll()
   }
 
@@ -60,6 +62,7 @@ module.exports = async function ({ file, size, frequency, extension, ...opts } =
     destination.release = (...args) => {
       originalRelease(...args)
       const [err, writtenSize] = args
+      /* istanbul ignore else */
       if (!err) {
         currentSize += writtenSize
         if (currentSize >= maxSize) {
@@ -75,7 +78,8 @@ module.exports = async function ({ file, size, frequency, extension, ...opts } =
   }
 
   function scheduleRoll () {
-    setTimeout(() => {
+    clearTimeout(rollTimeout)
+    rollTimeout = setTimeout(() => {
       roll()
       frequencySpec = parseFrequency(frequency)
       scheduleRoll()
