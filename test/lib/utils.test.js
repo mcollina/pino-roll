@@ -5,7 +5,7 @@ const { writeFile, rm, stat } = require('fs/promises')
 const { join } = require('path')
 const { test } = require('tap')
 
-const { buildFileName, detectLastNumber, parseFrequency, parseSize } = require('../../lib/utils')
+const { buildFileName, detectLastNumber, getNext, parseFrequency, parseSize } = require('../../lib/utils')
 const { cleanAndCreateFolder, sleep } = require('../utils')
 
 test('parseSize()', async ({ equal, throws }) => {
@@ -43,6 +43,15 @@ test('parseFrequency()', async ({ same, throws }) => {
     'supports custom frequency and does not return start'
   )
   throws(() => parseFrequency('null'), 'throws on non parseable string')
+})
+
+test('getNext()', async ({ same, throws }) => {
+  const today = new Date()
+
+  same(getNext('daily'), startOfDay(addDays(today, 1)).getTime(), 'supports daily frequency')
+  same(getNext('hourly'), startOfHour(addHours(today, 1)).getTime(), 'supports hourly frequency')
+  const custom = 3000
+  same(getNext(custom), Date.now() + custom, 'supports custom frequency and does not return start')
 })
 
 test('buildFileName()', async ({ equal, throws }) => {

@@ -1,7 +1,7 @@
 'use strict'
 
 const SonicBoom = require('sonic-boom')
-const { buildFileName, detectLastNumber, parseSize, parseFrequency } = require('./lib/utils')
+const { buildFileName, detectLastNumber, parseSize, parseFrequency, getNext } = require('./lib/utils')
 
 /**
  * @typedef {object} Options
@@ -39,7 +39,7 @@ const { buildFileName, detectLastNumber, parseSize, parseFrequency } = require('
  * @returns {SonicBoom} the Sonic boom steam, usabled as Pino transport.
  */
 module.exports = async function ({ file, size, frequency, extension, ...opts } = {}) {
-  let frequencySpec = parseFrequency(frequency)
+  const frequencySpec = parseFrequency(frequency)
 
   let number = await detectLastNumber(file, frequencySpec?.start)
 
@@ -81,7 +81,7 @@ module.exports = async function ({ file, size, frequency, extension, ...opts } =
     clearTimeout(rollTimeout)
     rollTimeout = setTimeout(() => {
       roll()
-      frequencySpec = parseFrequency(frequency)
+      frequencySpec.next = getNext(frequency)
       scheduleRoll()
     }, frequencySpec.next - Date.now())
   }
