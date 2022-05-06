@@ -57,20 +57,14 @@ module.exports = async function ({ file, size, frequency, extension, ...opts } =
   }
 
   if (maxSize) {
-    // patching sonic-boom stream is fragile, but it's the most performant way to "watch" the file's size
-    const originalRelease = destination.release.bind(destination)
-    destination.release = (...args) => {
-      originalRelease(...args)
-      const [err, writtenSize] = args
-      /* istanbul ignore else */
-      if (!err) {
-        currentSize += writtenSize
-        if (currentSize >= maxSize) {
-          currentSize = 0
-          roll()
-        }
+    destination.on('write', writtenSize => {
+      currentSize += writtenSize
+      if (currentSize >= maxSize) {
+        currentSize = 0
+        // delay to let the our destination finish its write
+        setTimeout(roll, 0)
       }
-    }
+    })
   }
 
   function roll () {
