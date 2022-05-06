@@ -105,3 +105,6 @@ dist
 
 # Visual Studio Code configuration
 .vscode/
+
+# Simple example
+logger.js
