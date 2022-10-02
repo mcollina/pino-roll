@@ -59,7 +59,14 @@ You can specify any of [Sonic-Boom options](https://github.com/pinojs/sonic-boom
   Numerical values will be considered as a number of milliseconds.
   Using a numerical value will always create a new file upon startup.
 
-* `extension?` appends the provided string after the file number.
+* `extension?`: appends the provided string after the file number.
+
+* `limit?`: strategy used to remove oldest files when rotating them:
+
+* `limit.count?`: number of log files, **in addition to the currently used file**.
+
+Please not that `limit` only considers **created log files**. It will not consider any pre-existing files.
+Therefore, starting your logger with a limit will never tries deleting older log files, created during previous executions.
 
 ## License
 

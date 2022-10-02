@@ -1,7 +1,15 @@
 'use strict'
 
 const SonicBoom = require('sonic-boom')
-const { buildFileName, detectLastNumber, parseSize, parseFrequency, getNext } = require('./lib/utils')
+const {
+  buildFileName,
+  checkFileRemoval,
+  detectLastNumber,
+  parseSize,
+  parseFrequency,
+  getNext,
+  validateLimitOptions
+} = require('./lib/utils')
 
 /**
  * @typedef {object} Options
@@ -25,6 +33,14 @@ const { buildFileName, detectLastNumber, parseSize, parseFrequency, getNext } = 
  * Using a numerical value will always create a new file upon startup.
  *
  * @property {string} extension? - When specified, appends a file extension after the file number.
+ *
+ * @property {LimitOptions} limit? - strategy used to remove oldest files when rotating them.
+ */
+
+/**
+ * @typedef {object} LimitOptions
+ *
+ * @property {number} count? -number of log files, **in addition to the currently used file**.
  */
 
 /**
@@ -38,15 +54,25 @@ const { buildFileName, detectLastNumber, parseSize, parseFrequency, getNext } = 
  * @param {PinoRollOptions} options - to configure file destionation, and rolling rules.
  * @returns {SonicBoom} the Sonic boom steam, usabled as Pino transport.
  */
-module.exports = async function ({ file, size, frequency, extension, ...opts } = {}) {
+module.exports = async function ({
+  file,
+  size,
+  frequency,
+  extension,
+  limit,
+  ...opts
+} = {}) {
+  validateLimitOptions(limit)
   const frequencySpec = parseFrequency(frequency)
 
   let number = await detectLastNumber(file, frequencySpec?.start)
 
+  const fileName = buildFileName(file, number, extension)
+  const createdFileNames = [fileName]
   let currentSize = 0
   const maxSize = parseSize(size)
 
-  const destination = new SonicBoom({ ...opts, dest: buildFileName(file, number, extension) })
+  const destination = new SonicBoom({ ...opts, dest: fileName })
 
   let rollTimeout
   if (frequencySpec) {
@@ -68,7 +94,12 @@ module.exports = async function ({ file, size, frequency, extension, ...opts } =
   }
 
   function roll () {
-    destination.reopen(buildFileName(file, ++number, extension))
+    const fileName = buildFileName(file, ++number, extension)
+    destination.reopen(fileName)
+    if (limit) {
+      createdFileNames.push(fileName)
+      checkFileRemoval(createdFileNames, limit)
+    }
   }
 
   function scheduleRoll () {
