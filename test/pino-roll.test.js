@@ -123,7 +123,7 @@ test('do not remove pre-existing file when removing files based on count', async
     file,
     limit: { count: 2 }
   })
-  for (let i = 1; i <= 7; i++) {
+  for (let i = 1; i <= 6; i++) {
     stream.write(`logged message #${i}\n`)
     await sleep(20)
   }
@@ -134,14 +134,13 @@ test('do not remove pre-existing file when removing files based on count', async
   await stat(`${file}.3`)
   content = await readFile(`${file}.3`, 'utf8')
   ok(content.includes('#3'), 'second file contains third log')
-  ok(content.includes('#4'), 'second file contains fourth log')
   await stat(`${file}.4`)
   content = await readFile(`${file}.4`, 'utf8')
+  ok(content.includes('#4'), 'third file contains fourth log')
   ok(content.includes('#5'), 'third file contains fifth log')
-  ok(content.includes('#6'), 'third file contains sixth log')
   await stat(`${file}.5`)
   content = await readFile(`${file}.5`, 'utf8')
-  ok(content.includes('#7'), 'fourth file contains seventh log')
+  ok(content.includes('#6'), 'fourth file contains sixth log')
   await rejects(stat(`${file}.2`), 'resumed file was deleted')
   await rejects(stat(`${file}.6`), 'no other files created')
 })
