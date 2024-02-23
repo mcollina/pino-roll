@@ -59,6 +59,7 @@ test('buildFileName()', async ({ equal, throws }) => {
   throws(buildFileName, 'throws on empty input')
   equal(buildFileName('my-file'), 'my-file.1', 'appends 1 by default')
   equal(buildFileName('my-file', 5, ext), 'my-file.5.json', 'appends number and extension')
+  equal(buildFileName('my-file', 5, ext, '-2024-02-23'), 'my-file-2024-02-23.5.json', 'appends number and extension and prefix')
 })
 
 test('detectLastNumber()', async ({ test, beforeEach }) => {
@@ -66,11 +67,20 @@ test('detectLastNumber()', async ({ test, beforeEach }) => {
   beforeEach(() => cleanAndCreateFolder(folder))
 
   test('given existing files', async ({ equal }) => {
-    const fileName = join(folder, 'file.5')
-    await writeFile(join(folder, 'file.1'), '')
-    await writeFile(join(folder, 'file.5'), '')
-    await writeFile(join(folder, 'file.10'), '')
-    await writeFile(join(folder, 'file.7'), '')
+    const fileName = join(folder, 'file.2024-02-23.5')
+    await writeFile(join(folder, 'file.2024-02-23.1'), '')
+    await writeFile(join(folder, 'file.2024-02-23.5'), '')
+    await writeFile(join(folder, 'file.2024-02-23.10'), '')
+    await writeFile(join(folder, 'file.2024-02-23.7'), '')
+    equal(await detectLastNumber(fileName), 10, 'detects highest existing number')
+  })
+
+  test('given existing files with prefix', async ({ equal }) => {
+    const fileName = join(folder, 'file-2024-02-23.5')
+    await writeFile(join(folder, 'file-2024-02-23.1'), '')
+    await writeFile(join(folder, 'file-2024-02-23.5'), '')
+    await writeFile(join(folder, 'file-2024-02-23.10'), '')
+    await writeFile(join(folder, 'file-2024-02-23.7'), '')
     equal(await detectLastNumber(fileName), 10, 'detects highest existing number')
   })
 

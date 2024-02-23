@@ -25,6 +25,8 @@ const { buildFileName, detectLastNumber, parseSize, parseFrequency, getNext } = 
  * Using a numerical value will always create a new file upon startup.
  *
  * @property {string} extension? - When specified, appends a file extension after the file number.
+ *
+ * @property {string} prefix? - When specified, is appended to file name before file number.
  */
 
 /**
@@ -38,7 +40,7 @@ const { buildFileName, detectLastNumber, parseSize, parseFrequency, getNext } = 
  * @param {PinoRollOptions} options - to configure file destionation, and rolling rules.
  * @returns {SonicBoom} the Sonic boom steam, usabled as Pino transport.
  */
-module.exports = async function ({ file, size, frequency, extension, ...opts } = {}) {
+module.exports = async function ({ file, size, frequency, extension, prefix, ...opts } = {}) {
   const frequencySpec = parseFrequency(frequency)
 
   let number = await detectLastNumber(file, frequencySpec?.start)
@@ -46,7 +48,7 @@ module.exports = async function ({ file, size, frequency, extension, ...opts } =
   let currentSize = 0
   const maxSize = parseSize(size)
 
-  const destination = new SonicBoom({ ...opts, dest: buildFileName(file, number, extension) })
+  const destination = new SonicBoom({ ...opts, dest: buildFileName(file, number, extension, prefix) })
 
   let rollTimeout
   if (frequencySpec) {
@@ -68,7 +70,7 @@ module.exports = async function ({ file, size, frequency, extension, ...opts } =
   }
 
   function roll () {
-    destination.reopen(buildFileName(file, ++number, extension))
+    destination.reopen(buildFileName(file, ++number, extension, prefix))
   }
 
   function scheduleRoll () {

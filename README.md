@@ -59,7 +59,9 @@ You can specify any of [Sonic-Boom options](https://github.com/pinojs/sonic-boom
   Numerical values will be considered as a number of milliseconds.
   Using a numerical value will always create a new file upon startup.
 
-* `extension?` appends the provided string after the file number.
+* `extension?` appends the provided string *after* the file number.
+
+* `prefix?` appends the provided string *before* the file number.
 
 ## License
 
