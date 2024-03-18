@@ -5,7 +5,15 @@ const { writeFile, rm, stat } = require('fs/promises')
 const { join } = require('path')
 const { test } = require('tap')
 
-const { buildFileName, detectLastNumber, getNext, parseFrequency, parseSize, getFileName } = require('../../lib/utils')
+const {
+  buildFileName,
+  detectLastNumber,
+  getNext,
+  parseFrequency,
+  parseSize,
+  getFileName,
+  validateLimitOptions
+} = require('../../lib/utils')
 const { cleanAndCreateFolder, sleep } = require('../utils')
 
 test('parseSize()', async ({ equal, throws }) => {
@@ -111,4 +119,13 @@ test('detectLastNumber()', async ({ test, beforeEach }) => {
     await rm(folder, { force: true, recursive: true })
     equal(await detectLastNumber(join(folder, 'file')), 1, 'returns 1')
   })
+})
+
+test('validateLimitOptions()', async ({ doesNotThrow, throws }) => {
+  doesNotThrow(() => validateLimitOptions(), 'allows no limit')
+  doesNotThrow(() => validateLimitOptions({ count: 2 }), 'allows valid count')
+  throws(() => validateLimitOptions(true), { message: 'limit must be an object' }, 'throws when limit is not an object')
+  throws(() => validateLimitOptions({ count: [] }), { message: 'limit.count must be a number greater than 0' }, 'throws when limit.count is not an number')
+  throws(() => validateLimitOptions({ count: -2 }), { message: 'limit.count must be a number greater than 0' }, 'throws when limit.count is negative')
+  throws(() => validateLimitOptions({ count: 0 }), { message: 'limit.count must be a number greater than 0' }, 'throws when limit.count is 0')
 })
