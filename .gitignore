@@ -108,3 +108,5 @@ dist
 
 # Simple example
 logger.js
+
+package-lock.json
