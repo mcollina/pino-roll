@@ -19,15 +19,15 @@ jobs:
         os: [macos-latest, ubuntu-latest, windows-latest]
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Use Node.js
-        uses: actions/setup-node@v3.5.0
+        uses: actions/setup-node@v4.0.2
         with:
           node-version: ${{ matrix.node-version }}
 
       - name: Restore cached dependencies
-        uses: actions/cache@v3.0.9
+        uses: actions/cache@v4.0.1
         with:
           path: node_modules
           key: node-modules-${{ hashFiles('package.json') }}

@@ -12,11 +12,18 @@ const {
 } = require('./lib/utils')
 
 /**
+ * A function that returns a string path to the base file name
+ *
+ * @typedef {function} LogFilePath
+ * @returns {string}
+ */
+
+/**
  * @typedef {object} Options
  *
- * @property {string} file - Absolute or relative path to the log file.
+ * @property {string|LogFilePath} file - Absolute or relative path to the log file.
  * Your application needs the write right on the parent folder.
- * Number will be appened to this file name.
+ * Number will be appended to this file name.
  * When the parent folder already contains numbered files, numbering will continue based on the highest number.
  * If this path does not exist, the logger with throw an error unless you set `mkdir` to `true`.
  *

@@ -1,9 +1,10 @@
 'use strict'
 
 const { once } = require('events')
-const { stat, readFile, writeFile } = require('fs/promises')
+const { stat, readFile, writeFile, readdir } = require('fs/promises')
 const { join } = require('path')
 const { test, beforeEach } = require('tap')
+const { format } = require('date-fns')
 
 const { buildStream, cleanAndCreateFolder, sleep } = require('./utils')
 
@@ -33,6 +34,21 @@ test('rotate file based on time', async ({ ok, notOk, rejects }) => {
   notOk(content.includes('#2'), 'first file does not contains second log')
   await stat(`${file}.3`)
   rejects(stat(`${file}.4`), 'no other files created')
+})
+
+test('rotate file based on time and parse filename func', async ({ ok, notOk, rejects }) => {
+  const file = join(logFolder, 'log')
+  const fileFunc = () => `${file}-${format(new Date(), 'HH-mm-ss-SSS')}`
+  const stream = await buildStream({ frequency: 100, file: fileFunc })
+  stream.write('logged message #1\n')
+  stream.write('logged message #2\n')
+  await sleep(110)
+  stream.write('logged message #3\n')
+  stream.write('logged message #4\n')
+  await sleep(110)
+  stream.end()
+  const files = await readdir(logFolder)
+  ok(files.length === 3, 'created three files')
 })
 
 test('rotate file based on size', async ({ ok, rejects }) => {

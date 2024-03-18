@@ -46,6 +46,7 @@ You can specify any of [Sonic-Boom options](https://github.com/pinojs/sonic-boom
   Number will be appened to this file name.
   When the parent folder already contains numbered files, numbering will continue based on the highest number.
   If this path does not exist, the logger with throw an error unless you set `mkdir` to `true`.
+  `file` may also be a function that returns a string.
 
 * `size?`: the maximum size of a given log file.
   Can be combined with frequency.

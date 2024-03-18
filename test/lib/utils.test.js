@@ -5,7 +5,15 @@ const { writeFile, rm, stat } = require('fs/promises')
 const { join } = require('path')
 const { test } = require('tap')
 
-const { buildFileName, detectLastNumber, getNext, parseFrequency, parseSize, validateLimitOptions } = require('../../lib/utils')
+const {
+  buildFileName,
+  detectLastNumber,
+  getNext,
+  parseFrequency,
+  parseSize,
+  getFileName,
+  validateLimitOptions
+} = require('../../lib/utils')
 const { cleanAndCreateFolder, sleep } = require('../utils')
 
 test('parseSize()', async ({ equal, throws }) => {
@@ -54,10 +62,18 @@ test('getNext()', async ({ same, throws }) => {
   same(getNext(custom), Date.now() + custom, 'supports custom frequency and does not return start')
 })
 
+test('getFileName()', async ({ equal, throws }) => {
+  const strFunc = () => 'my-func'
+  throws(getFileName, 'throws on empty input')
+  equal(getFileName('my-file'), 'my-file', 'returns string when string given')
+  equal(getFileName(strFunc), 'my-func', 'invokes function when function given')
+})
+
 test('buildFileName()', async ({ equal, throws }) => {
   const ext = '.json'
   throws(buildFileName, 'throws on empty input')
   equal(buildFileName('my-file'), 'my-file.1', 'appends 1 by default')
+  equal(buildFileName(() => 'my-func'), 'my-func.1', 'appends 1 by default')
   equal(buildFileName('my-file', 5, ext), 'my-file.5.json', 'appends number and extension')
 })
 
@@ -67,11 +83,13 @@ test('detectLastNumber()', async ({ test, beforeEach }) => {
 
   test('given existing files', async ({ equal }) => {
     const fileName = join(folder, 'file.5')
+    const fileNameFunc = () => fileName
     await writeFile(join(folder, 'file.1'), '')
     await writeFile(join(folder, 'file.5'), '')
     await writeFile(join(folder, 'file.10'), '')
     await writeFile(join(folder, 'file.7'), '')
     equal(await detectLastNumber(fileName), 10, 'detects highest existing number')
+    equal(await detectLastNumber(fileNameFunc), 10, 'detects highest existing number when given func')
   })
 
   test('given existing files and a time', async ({ equal }) => {
