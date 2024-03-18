@@ -27,7 +27,7 @@ jobs:
           node-version: ${{ matrix.node-version }}
 
       - name: Restore cached dependencies
-        uses: actions/cache@v3.0.9
+        uses: actions/cache@v4.0.1
         with:
           path: node_modules
           key: node-modules-${{ hashFiles('package.json') }}
