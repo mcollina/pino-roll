@@ -1,6 +1,6 @@
 {
   "name": "pino-roll",
-  "version": "1.0.0-rc.1",
+  "version": "1.0.0",
   "description": "A Pino transport that automatically rolls your log files",
   "main": "pino-roll.js",
   "scripts": {
@@ -11,13 +11,16 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/feugy/pino-roll.git"
+    "url": "git+https://github.com/mcollina/pino-roll.git"
   },
   "keywords": [
     "pino",
     "transport"
   ],
   "author": "Damien Simonin Feugas <damien.feugas@gmail.com>",
+  "contributors": [
+    "Matteo Collina <hello@matteocollina.com>"
+  ],
   "license": "MIT",
   "dependencies": {
     "sonic-boom": "^3.8.0"

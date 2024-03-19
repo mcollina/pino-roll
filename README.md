@@ -1,11 +1,6 @@
 # pino-roll
-[![npm version](https://img.shields.io/npm/v/pino-roll)](https://www.npmjs.com/package/pino-roll)
-[![Build Status](https://img.shields.io/github/workflow/status/feugy/pino-roll/CI)](https://github.com/feugy/pino-roll/actions)
-[![Known Vulnerabilities](https://snyk.io/test/github/feugy/pino-roll/badge.svg)](https://snyk.io/test/github/feugy/pino-roll)
-<!-- [![Coverage Status](https://coveralls.io/repos/github/feugy/pino-roll/badge.svg?branch=master)](https://coveralls.io/github/feugy/pino-roll?branch=master) -->
-[![js-standard-style](https://img.shields.io/badge/code%20style-standard-brightgreen.svg?style=flat)](https://standardjs.com/)
 
-A Pino transport that automatically rolls your log files
+A Pino transport that automatically rolls your log files.
 
 ## Install
 
