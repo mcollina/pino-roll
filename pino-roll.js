@@ -8,6 +8,7 @@ const {
   parseSize,
   parseFrequency,
   getNext,
+  getFileSize,
   validateLimitOptions
 } = require('./lib/utils')
 
@@ -76,7 +77,7 @@ module.exports = async function ({
 
   const fileName = buildFileName(file, number, extension)
   const createdFileNames = [fileName]
-  let currentSize = 0
+  let currentSize = await getFileSize(fileName)
   const maxSize = parseSize(size)
 
   const destination = new SonicBoom({ ...opts, dest: fileName })
@@ -94,7 +95,7 @@ module.exports = async function ({
       currentSize += writtenSize
       if (currentSize >= maxSize) {
         currentSize = 0
-        // delay to let the our destination finish its write
+        // delay to let the destination finish its write
         setTimeout(roll, 0)
       }
     })

@@ -7,6 +7,7 @@ const { test } = require('tap')
 
 const {
   buildFileName,
+  getFileSize,
   detectLastNumber,
   getNext,
   parseFrequency,
@@ -53,7 +54,7 @@ test('parseFrequency()', async ({ same, throws }) => {
   throws(() => parseFrequency('null'), 'throws on non parseable string')
 })
 
-test('getNext()', async ({ same, throws }) => {
+test('getNext()', async ({ same }) => {
   const today = new Date()
 
   same(getNext('daily'), startOfDay(addDays(today, 1)).getTime(), 'supports daily frequency')
@@ -75,6 +76,23 @@ test('buildFileName()', async ({ equal, throws }) => {
   equal(buildFileName('my-file'), 'my-file.1', 'appends 1 by default')
   equal(buildFileName(() => 'my-func'), 'my-func.1', 'appends 1 by default')
   equal(buildFileName('my-file', 5, ext), 'my-file.5.json', 'appends number and extension')
+})
+
+test('getFileSize()', async ({ test, beforeEach }) => {
+  const folder = join('logs', 'utils')
+  beforeEach(() => cleanAndCreateFolder(folder))
+
+  test('given an existing file', async ({ equal }) => {
+    const fileName = join(folder, 'file.log')
+    await writeFile(fileName, '123')
+
+    equal(await getFileSize(fileName), 3, 'detects size of existing file')
+  })
+
+  test('given a non existing file', async ({ equal }) => {
+    const fileName = join(folder, 'file.log')
+    equal(await getFileSize(fileName), 0, 'set current size to 0 with non existing file')
+  })
 })
 
 test('detectLastNumber()', async ({ test, beforeEach }) => {
