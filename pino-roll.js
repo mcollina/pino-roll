@@ -75,7 +75,7 @@ module.exports = async function ({
 
   let number = await detectLastNumber(file, frequencySpec?.start)
 
-  const fileName = buildFileName(file, number, extension)
+  let fileName = buildFileName(file, number, extension)
   const createdFileNames = [fileName]
   let currentSize = await getFileSize(fileName)
   const maxSize = parseSize(size)
@@ -93,7 +93,7 @@ module.exports = async function ({
   if (maxSize) {
     destination.on('write', writtenSize => {
       currentSize += writtenSize
-      if (currentSize >= maxSize) {
+      if (fileName === destination.file && currentSize >= maxSize) {
         currentSize = 0
         // delay to let the destination finish its write
         setTimeout(roll, 0)
@@ -102,7 +102,7 @@ module.exports = async function ({
   }
 
   function roll () {
-    const fileName = buildFileName(file, ++number, extension)
+    fileName = buildFileName(file, ++number, extension)
     destination.reopen(fileName)
     if (limit) {
       createdFileNames.push(fileName)
