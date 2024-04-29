@@ -23,7 +23,7 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "sonic-boom": "^3.8.0"
+    "sonic-boom": "^4.0.1"
   },
   "devDependencies": {
     "date-fns": "^3.6.0",
