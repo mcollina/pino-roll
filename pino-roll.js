@@ -95,14 +95,14 @@ module.exports = async function ({
       currentSize += writtenSize
       if (fileName === destination.file && currentSize >= maxSize) {
         currentSize = 0
+        fileName = buildFileName(file, ++number, extension)
         // delay to let the destination finish its write
-        setTimeout(roll, 0)
+        destination.once('drain', roll)
       }
     })
   }
 
   function roll () {
-    fileName = buildFileName(file, ++number, extension)
     destination.reopen(fileName)
     if (limit) {
       createdFileNames.push(fileName)
@@ -113,6 +113,7 @@ module.exports = async function ({
   function scheduleRoll () {
     clearTimeout(rollTimeout)
     rollTimeout = setTimeout(() => {
+      fileName = buildFileName(file, ++number, extension)
       roll()
       frequencySpec.next = getNext(frequency)
       scheduleRoll()
