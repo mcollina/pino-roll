@@ -1,7 +1,7 @@
 'use strict'
 
 const { once } = require('events')
-const { stat, readFile, writeFile, readdir } = require('fs/promises')
+const { stat, readFile, writeFile, readdir, lstat, readlink } = require('fs/promises')
 const { join } = require('path')
 const { test, beforeEach } = require('tap')
 const { format } = require('date-fns')
@@ -210,4 +210,36 @@ test('throw when limit.count is 0', async ({ rejects }) => {
     },
     'throws on limit.count being 0'
   )
+})
+
+test('creates symlink if prop is set', async ({ equal, resolves }) => {
+  const file = join(logFolder, 'log')
+  const linkPath = join(logFolder, 'current.log')
+  const stream = await buildStream({ file, symlink: true })
+  stream.write('test content\n')
+  stream.end()
+  await sleep(200)
+  await resolves(lstat(linkPath), 'symlink was created')
+  const linkTarget = await readlink(linkPath)
+  equal(linkTarget, 'log.1', 'symlink points to the correct file')
+  const content = await readFile(linkPath, 'utf8')
+  equal(content, 'test content\n', 'symlink contains correct content')
+})
+
+test('symlink rotates on roll', async ({ equal, ok, resolves }) => {
+  const file = join(logFolder, 'log')
+  const linkPath = join(logFolder, 'current.log')
+  const stream = await buildStream({ frequency: 100, file, symlink: true })
+  stream.write('logged message #1\n')
+  stream.write('logged message #2\n')
+  await sleep(110)
+  stream.write('logged message #3\n')
+  stream.write('logged message #4\n')
+  stream.end()
+  await sleep(200)
+  await resolves(lstat(linkPath), 'symlink was created')
+  const linkTarget = await readlink(linkPath)
+  equal(linkTarget, 'log.2', 'symlink points to the correct file')
+  const content = await readFile(linkPath, 'utf8')
+  ok(content.includes('#4'), 'symlink contains fourth log')
 })

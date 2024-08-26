@@ -4,6 +4,7 @@ const SonicBoom = require('sonic-boom')
 const {
   buildFileName,
   checkFileRemoval,
+  createSymlink,
   detectLastNumber,
   parseSize,
   parseFrequency,
@@ -68,6 +69,7 @@ module.exports = async function ({
   frequency,
   extension,
   limit,
+  symlink,
   ...opts
 } = {}) {
   validateLimitOptions(limit)
@@ -81,6 +83,10 @@ module.exports = async function ({
   const maxSize = parseSize(size)
 
   const destination = new SonicBoom({ ...opts, dest: fileName })
+
+  if (symlink) {
+    createSymlink(fileName)
+  }
 
   let rollTimeout
   if (frequencySpec) {
@@ -104,6 +110,9 @@ module.exports = async function ({
 
   function roll () {
     destination.reopen(fileName)
+    if (symlink) {
+      createSymlink(fileName)
+    }
     if (limit) {
       createdFileNames.push(fileName)
       checkFileRemoval(createdFileNames, limit)
