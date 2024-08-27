@@ -43,6 +43,8 @@ const {
  *
  * @property {string} extension? - When specified, appends a file extension after the file number.
  *
+ * @property {boolean} symlink? - When specified, creates a symlink to the current log file.
+ *
  * @property {LimitOptions} limit? - strategy used to remove oldest files when rotating them.
  */
 
