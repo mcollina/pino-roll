@@ -57,6 +57,10 @@ You can specify any of [Sonic-Boom options](https://github.com/pinojs/sonic-boom
 
 * `extension?`: appends the provided string after the file number.
 
+* `symlink?`: creates a symlink to the current log file.
+  The symlink will be updated to the latest log file upon rotation.
+  The name of the symlink is always called `current.log`.
+
 * `limit?`: strategy used to remove oldest files when rotating them:
 
 * `limit.count?`: number of log files, **in addition to the currently used file**.
