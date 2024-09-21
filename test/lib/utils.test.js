@@ -9,6 +9,7 @@ const {
   buildFileName,
   checkSymlink,
   createSymlink,
+  extractFileName,
   getFileSize,
   detectLastNumber,
   getNext,
@@ -152,7 +153,11 @@ test('validateLimitOptions()', async ({ doesNotThrow, throws }) => {
 
 test('checkSymlink()', async ({ test, beforeEach }) => {
   const folder = join('logs', 'utils')
-  beforeEach(() => cleanAndCreateFolder(folder))
+  const other = join(folder, 'other')
+  beforeEach(async () => {
+    await cleanAndCreateFolder(folder)
+    await cleanAndCreateFolder(other)
+  })
 
   test('given a new symlink (should return true)', async ({ equal }) => {
     const fileName = join(folder, 'file.log')
@@ -172,6 +177,23 @@ test('checkSymlink()', async ({ test, beforeEach }) => {
     const linkTarget = await readlink(linkPath)
     equal(linkTarget, fileName, 'symlink remains unchanged')
   })
+
+  test('given a new symlink pointing to a different folder (should return true)', async ({ equal }) => {
+    const linkPath = join(folder, 'current.log')
+    const fileName = join(other, 'file.log')
+    await writeFile(fileName, 'test content')
+    const result = await checkSymlink(fileName, linkPath)
+    equal(result, true, 'returns true when symlink does not exist')
+  })
+
+  test('given a symlink pointing to a different folder (should return false)', async ({ equal }) => {
+    const linkPath = join(folder, 'current.log')
+    const fileName = join(other, 'file.log')
+    await writeFile(fileName, 'test content')
+    await symlink(fileName, linkPath)
+    const result = await checkSymlink(fileName, linkPath)
+    equal(result, false, 'returns false when symlink points to a different folder')
+  })
 })
 
 test('createSymlink()', async ({ beforeEach }) => {
@@ -179,11 +201,16 @@ test('createSymlink()', async ({ beforeEach }) => {
   beforeEach(() => cleanAndCreateFolder(folder))
 
   test('given a new symlink (should create symlink)', async ({ equal }) => {
-    const fileName = join(folder, 'file.log')
+    const fileName = join(folder, 'file1.log')
     const linkPath = join(folder, 'current.log')
     await writeFile(fileName, 'test content')
     await createSymlink(fileName)
     const linkTarget = await readlink(linkPath)
-    equal(linkTarget, fileName, 'creates correct symlink')
+    equal(linkTarget, extractFileName(fileName), 'creates correct symlink')
+  })
+
+  test('given there is already a symlink (should not create symlink)', async ({ equal }) => {
+    const fileName = join(folder, 'file1.log')
+    equal(false, await createSymlink(fileName), 'returns false when symlink already exists')
   })
 })
