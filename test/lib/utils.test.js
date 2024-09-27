@@ -4,6 +4,7 @@ const { addDays, addHours, startOfDay, startOfHour } = require('date-fns')
 const { writeFile, rm, stat, readlink, symlink } = require('fs/promises')
 const { join } = require('path')
 const { test } = require('tap')
+const { format } = require('date-fns')
 
 const {
   buildFileName,
@@ -16,7 +17,9 @@ const {
   parseFrequency,
   parseSize,
   getFileName,
-  validateLimitOptions
+  validateLimitOptions,
+  validateDateFormat,
+  parseDate
 } = require('../../lib/utils')
 const { cleanAndCreateFolder, sleep } = require('../utils')
 
@@ -78,7 +81,30 @@ test('buildFileName()', async ({ equal, throws }) => {
   throws(buildFileName, 'throws on empty input')
   equal(buildFileName('my-file'), 'my-file.1', 'appends 1 by default')
   equal(buildFileName(() => 'my-func'), 'my-func.1', 'appends 1 by default')
-  equal(buildFileName('my-file', 5, ext), 'my-file.5.json', 'appends number and extension')
+  equal(buildFileName('my-file', null, 5, ext), 'my-file.5.json', 'appends number and extension')
+  equal(buildFileName('my-file', '2024-09-26'), 'my-file.2024-09-26.1', 'appends date')
+  equal(buildFileName('my-file', '2024-09-26-07'), 'my-file.2024-09-26-07.1', 'appends date and hour')
+  equal(buildFileName('my-file', '2024-09-26', 5), 'my-file.2024-09-26.5', 'appends date and number')
+  equal(buildFileName('my-file', '2024-09-26', 5, ext), 'my-file.2024-09-26.5.json', 'appends date, number and extension')
+})
+
+test('validateDateFormat()', async ({ equal, throws }) => {
+  equal(validateDateFormat('2024-09-26'), true, 'returns null on valid date format')
+  equal(validateDateFormat('2024-09-26-10'), true, 'returns null on valid date time format')
+  throws(() => validateDateFormat('2024:09:26'), 'throws on invalid date format with semicolon')
+  throws(() => validateDateFormat('2024*09*26'), 'throws on invalid date format with asterisk')
+  throws(() => validateDateFormat('2024<09>26'), 'throws on invalid date format with <>')
+})
+
+test('parseDate()', async ({ equal, throws }) => {
+  const today = new Date()
+  const frequencySpec = { frequency: 'hourly', start: startOfHour(today).getTime(), next: startOfHour(addHours(today, 1)).getTime() }
+  equal(parseDate(null, frequencySpec), null, 'returns null on empty format')
+  equal(parseDate('yyyy-MM-dd', { frequency: 100 }), null, 'returns null on custom frequency')
+  equal(parseDate('yyyy-MM-dd-hh', frequencySpec, true), format(frequencySpec.start, 'yyyy-MM-dd-hh'), 'parse start date time')
+  equal(parseDate('yyyy-MM-dd-hh', frequencySpec), format(frequencySpec.next, 'yyyy-MM-dd-hh'), 'parse next date time')
+  throws(() => parseDate('yyyy-MM-dd-hhU', frequencySpec), 'throws on invalid date format with character U')
+  throws(() => parseDate('yyyy-MM-dd-hhJ', frequencySpec), 'throws on invalid date format with character J')
 })
 
 test('getFileSize()', async ({ test, beforeEach }) => {

@@ -10,7 +10,9 @@ const {
   parseFrequency,
   getNext,
   getFileSize,
-  validateLimitOptions
+  validateLimitOptions,
+  parseDate,
+  validateDateFormat
 } = require('./lib/utils')
 
 /**
@@ -46,6 +48,9 @@ const {
  * @property {boolean} symlink? - When specified, creates a symlink to the current log file.
  *
  * @property {LimitOptions} limit? - strategy used to remove oldest files when rotating them.
+ *
+ * @property {string} dateFormat? - When specified, appends the current date/time to the file name in the provided format.
+ * Supports date formats from `date-fns` (see: https://date-fns.org/v4.1.0/docs/format), such as 'yyyy-MM-dd' and 'yyyy-MM-dd-hh'.
  */
 
 /**
@@ -72,14 +77,17 @@ module.exports = async function ({
   extension,
   limit,
   symlink,
+  dateFormat,
   ...opts
 } = {}) {
   validateLimitOptions(limit)
+  validateDateFormat(dateFormat)
   const frequencySpec = parseFrequency(frequency)
 
+  let date = parseDate(dateFormat, frequencySpec, true)
   let number = await detectLastNumber(file, frequencySpec?.start)
 
-  let fileName = buildFileName(file, number, extension)
+  let fileName = buildFileName(file, date, number, extension)
   const createdFileNames = [fileName]
   let currentSize = await getFileSize(fileName)
   const maxSize = parseSize(size)
@@ -103,7 +111,7 @@ module.exports = async function ({
       currentSize += writtenSize
       if (fileName === destination.file && currentSize >= maxSize) {
         currentSize = 0
-        fileName = buildFileName(file, ++number, extension)
+        fileName = buildFileName(file, date, ++number, extension)
         // delay to let the destination finish its write
         destination.once('drain', roll)
       }
@@ -124,7 +132,8 @@ module.exports = async function ({
   function scheduleRoll () {
     clearTimeout(rollTimeout)
     rollTimeout = setTimeout(() => {
-      fileName = buildFileName(file, ++number, extension)
+      date = parseDate(dateFormat, frequencySpec)
+      fileName = buildFileName(file, date, ++number, extension)
       roll()
       frequencySpec.next = getNext(frequency)
       scheduleRoll()
