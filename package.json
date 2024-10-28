@@ -28,6 +28,7 @@
   },
   "devDependencies": {
     "husky": "^9.0.11",
+    "mockdate": "^3.0.5",
     "pino": "^9.2.0",
     "snazzy": "^9.0.0",
     "standard": "^17.0.0-2",
