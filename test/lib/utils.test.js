@@ -5,6 +5,7 @@ const { writeFile, rm, stat, readlink, symlink } = require('fs/promises')
 const { join } = require('path')
 const { test } = require('tap')
 const { format } = require('date-fns')
+const MockDate = require('mockdate')
 
 const {
   buildFileName,
@@ -67,6 +68,66 @@ test('getNext()', async ({ same }) => {
   same(getNext('hourly'), startOfHour(addHours(today, 1)).getTime(), 'supports hourly frequency')
   const custom = 3000
   same(getNext(custom), Date.now() + custom, 'supports custom frequency and does not return start')
+})
+
+test('getNext() on dates transitioning from DST to Standard Time', async ({ same }) => {
+  // on these days the time rolls back 1 hour so there "are" 25 hours in the day
+  // genNext() should account for variable number of hours in the day
+
+  // test two different timezones
+  const data = [
+    {
+      tz: 'Europe/Berlin',
+      mockDate: '27 Oct 2024 00:00:00 GMT+0100'
+    },
+    {
+      tz: 'America/New_York',
+      mockDate: '03 Nov 2024 00:00:00 GMT-0500'
+    }
+  ]
+
+  for (const d of data) {
+    MockDate.set(d.mockDate)
+    process.env.TZ = d.tz
+    const today = new Date()
+
+    same(getNext('daily'), startOfDay(addDays(today, 1)).getTime(), 'supports daily frequency')
+    same(getNext('hourly'), startOfHour(addHours(today, 1)).getTime(), 'supports hourly frequency')
+    const custom = 3000
+    same(getNext(custom), Date.now() + custom, 'supports custom frequency and does not return start')
+    MockDate.reset()
+    process.env.TZ = undefined
+  }
+})
+
+test('getNext() on dates transitioning from Standard Time to DST', async ({ same }) => {
+  // on these days the time rolls forward 1 hour so there "are" 23 hours in the day
+  // genNext() should account for variable number of hours in the day
+
+  // test two different timezones
+  const data = [
+    {
+      tz: 'Europe/Berlin',
+      mockDate: '31 March 2024 01:00:00 GMT+0100'
+    },
+    {
+      tz: 'America/New_York',
+      mockDate: '10 Nov 2024 01:00:00 GMT-0500'
+    }
+  ]
+
+  for (const d of data) {
+    MockDate.set(d.mockDate)
+    process.env.TZ = d.tz
+    const today = new Date()
+
+    same(getNext('daily'), startOfDay(addDays(today, 1)).getTime(), 'supports daily frequency')
+    same(getNext('hourly'), startOfHour(addHours(today, 1)).getTime(), 'supports hourly frequency')
+    const custom = 3000
+    same(getNext(custom), Date.now() + custom, 'supports custom frequency and does not return start')
+    MockDate.reset()
+    process.env.TZ = undefined
+  }
 })
 
 test('getFileName()', async ({ equal, throws }) => {
