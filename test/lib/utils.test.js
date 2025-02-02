@@ -53,10 +53,12 @@ test('parseFrequency()', async ({ same, throws }) => {
     'supports hourly frequency'
   )
   const custom = 3000
+  const start = today.getTime() - today.getTime() % custom
+  const next = start + custom
   same(
     parseFrequency(custom),
-    { frequency: custom, next: Date.now() + custom },
-    'supports custom frequency and does not return start'
+    { frequency: custom, start, next },
+    'supports custom frequency'
   )
   throws(() => parseFrequency('null'), 'throws on non parseable string')
 })
@@ -67,7 +69,9 @@ test('getNext()', async ({ same }) => {
   same(getNext('daily'), startOfDay(addDays(today, 1)).getTime(), 'supports daily frequency')
   same(getNext('hourly'), startOfHour(addHours(today, 1)).getTime(), 'supports hourly frequency')
   const custom = 3000
-  same(getNext(custom), Date.now() + custom, 'supports custom frequency and does not return start')
+  const time = Date.now()
+  const next = time - time % custom + custom
+  same(getNext(custom), next, 'supports custom frequency')
 })
 
 test('getNext() on dates transitioning from DST to Standard Time', async ({ same }) => {
@@ -161,7 +165,6 @@ test('parseDate()', async ({ equal, throws }) => {
   const today = new Date()
   const frequencySpec = { frequency: 'hourly', start: startOfHour(today).getTime(), next: startOfHour(addHours(today, 1)).getTime() }
   equal(parseDate(null, frequencySpec), null, 'returns null on empty format')
-  equal(parseDate('yyyy-MM-dd', { frequency: 100 }), null, 'returns null on custom frequency')
   equal(parseDate('yyyy-MM-dd-hh', frequencySpec, true), format(frequencySpec.start, 'yyyy-MM-dd-hh'), 'parse start date time')
   equal(parseDate('yyyy-MM-dd-hh', frequencySpec), format(frequencySpec.next, 'yyyy-MM-dd-hh'), 'parse next date time')
   throws(() => parseDate('yyyy-MM-dd-hhU', frequencySpec), 'throws on invalid date format with character U')
