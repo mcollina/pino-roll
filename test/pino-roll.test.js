@@ -14,6 +14,7 @@ beforeEach(() => cleanAndCreateFolder(logFolder))
 
 test('rotate file based on time', async ({ ok, notOk, rejects }) => {
   const file = join(logFolder, 'log')
+  await sleep(100 - (Date.now() % 100))
   const stream = await buildStream({ frequency: 100, file })
   stream.write('logged message #1\n')
   stream.write('logged message #2\n')
@@ -29,15 +30,16 @@ test('rotate file based on time', async ({ ok, notOk, rejects }) => {
   notOk(content.includes('#3'), 'first file does not contains third log')
   await stat(`${file}.2`)
   content = await readFile(`${file}.2`, 'utf8')
-  ok(content.includes('#3'), 'first file contains third log')
-  ok(content.includes('#4'), 'first file contains fourth log')
-  notOk(content.includes('#2'), 'first file does not contains second log')
+  ok(content.includes('#3'), 'second file contains third log')
+  ok(content.includes('#4'), 'second file contains fourth log')
+  notOk(content.includes('#2'), 'second file does not contains second log')
   await stat(`${file}.3`)
   rejects(stat(`${file}.4`), 'no other files created')
 })
 
 test('rotate file based on time and parse filename func', async ({ ok, notOk, rejects }) => {
   const file = join(logFolder, 'log')
+  await sleep(100 - (Date.now() % 100))
   const fileFunc = () => `${file}-${format(new Date(), 'HH-mm-ss-SSS')}`
   const stream = await buildStream({ frequency: 100, file: fileFunc })
   stream.write('logged message #1\n')
@@ -229,6 +231,7 @@ test('creates symlink if prop is set', async ({ equal, resolves }) => {
 test('symlink rotates on roll', async ({ equal, ok, resolves }) => {
   const file = join(logFolder, 'log')
   const linkPath = join(logFolder, 'current.log')
+  await sleep(100 - (Date.now() % 100))
   const stream = await buildStream({ frequency: 100, file, symlink: true })
   stream.write('logged message #1\n')
   stream.write('logged message #2\n')

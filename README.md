@@ -53,7 +53,7 @@ You can specify any of [Sonic-Boom options](https://github.com/pinojs/sonic-boom
   Use `daily` or `hourly` to rotate file every day (or every hour).
   Existing file within the current day (or hour) will be re-used.
   Numerical values will be considered as a number of milliseconds.
-  Using a numerical value will always create a new file upon startup.
+  Using a numerical value will result in a file during start/end of the frequency specified.
 
 * `extension?`: appends the provided string after the file number.
 
