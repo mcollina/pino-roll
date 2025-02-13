@@ -7,6 +7,7 @@ const { test, beforeEach } = require('tap')
 const { format } = require('date-fns')
 
 const { buildStream, cleanAndCreateFolder, sleep } = require('./utils')
+const { removeOldFiles } = require('../lib/utils')
 
 const logFolder = join('logs', 'roll')
 
@@ -112,6 +113,37 @@ test('remove files based on count', async ({ ok, rejects }) => {
   await rejects(stat(`${file}.4`), 'no other files created')
 })
 
+test('removeOtherOldFiles()', async ({ ok, notOk }) => {
+  const dateFormat = 'HH-mm-ss-S'
+  const notLogFile = 'notLogFile'
+  await writeFile(join(logFolder, notLogFile), 'not a log file')
+  let now = new Date()
+  now = new Date(now.getTime() - now.getTime() % 100)
+  const file0 = `log.${format(now, dateFormat)}`
+  await writeFile(join(logFolder, `${file0}.1`), 'Content log 0.1')
+  const file1 = `log.${format(new Date(now.getTime() + 100), dateFormat)}`
+  await writeFile(join(logFolder, `${file1}.1`), 'Content log 1.1')
+  await writeFile(join(logFolder, `${file1}.2`), 'Content log 1.2')
+  const file2 = `log.${format(new Date(now.getTime() + 200), dateFormat)}`
+  await writeFile(join(logFolder, `${file2}.1`), 'Content log 2.1')
+
+  await removeOldFiles({ baseFile: join(logFolder, 'log'), count: 2, removeOtherLogFiles: true, dateFormat })
+  let files = await readdir(logFolder)
+  notOk(files.includes(`${file0}.1`), 'first run: fourth recent file is removed')
+  notOk(files.includes(`${file1}.1`), 'first run: third recent file is removed')
+  ok(files.includes(`${file1}.2`), 'first run: second recent file is not removed')
+  ok(files.includes(`${file2}.1`), 'first run: most recent file is not removed')
+  ok(files.includes(notLogFile), 'first run: non log file is not removed')
+
+  await removeOldFiles({ baseFile: join(logFolder, 'log'), count: 2, removeOtherLogFiles: true, dateFormat })
+  files = await readdir(logFolder)
+  notOk(files.includes(`${file0}.1`), 'second run: fourth recent file is removed')
+  notOk(files.includes(`${file1}.1`), 'second run: third recent file is removed')
+  ok(files.includes(`${file1}.2`), 'second run: second recent file is not removed')
+  ok(files.includes(`${file2}.1`), 'second run: most recent file is not removed')
+  ok(files.includes(notLogFile), 'second run: non log file is not removed')
+})
+
 test('do not remove pre-existing file when removing files based on count', async ({
   ok,
   equal,
@@ -145,6 +177,43 @@ test('do not remove pre-existing file when removing files based on count', async
   ok(content.includes('#6'), 'fourth file contains sixth log')
   await rejects(stat(`${file}.2`), 'resumed file was deleted')
   await rejects(stat(`${file}.6`), 'no other files created')
+})
+
+test('remove pre-existing log files when removing files based on count when limit.removeOtherLogFiles', async ({
+  ok,
+  rejects
+}) => {
+  const dateFormat = 'HH-mm-ss'
+  await sleep(1000 - (Date.now() % 1000))
+  let now = new Date()
+  now = new Date(now.getTime() - now.getTime() % 500)
+  const prev = new Date(now.getTime() - 500)
+  const prevFile = join(logFolder, `log.${format(prev, dateFormat)}`)
+  const notLogFileName = join(logFolder, 'notLogFile')
+  await writeFile(notLogFileName, 'not a log file')
+  await writeFile(`${prevFile}.1`, 'previous content')
+  const file1 = join(logFolder, `log.${format(new Date(now.getTime()), dateFormat)}`)
+  const file2 = join(logFolder, `log.${format(new Date(now.getTime() + 1500), dateFormat)}`)
+  await writeFile(`${file1}.1`, 'oldest content')
+  const stream = await buildStream({
+    dateFormat,
+    file: join(logFolder, 'log'),
+    frequency: 500,
+    limit: { count: 2, removeOtherLogFiles: true }
+  })
+  for (let i = 1; i <= 3; i++) {
+    stream.write(`logged message #${i}\n`)
+    if (i < 3) await sleep(550)
+  }
+  stream.end()
+  rejects(stat(`${prevFile}.1`), 'oldest file was deleted')
+  let content = await readFile(notLogFileName, 'utf8')
+  ok(content.includes('not a log file'), 'non-log file is untouched')
+  content = await readFile(`${file1}.2`, 'utf8')
+  ok(content.includes('#2'), 'TS1 - 2 file contains second log')
+  content = await readFile(`${file2}.1`, 'utf8')
+  ok(content.includes('#3'), 'TS2 - 1 file contains third log')
+  rejects(stat(`${file2}.2`), 'no other files created')
 })
 
 test('throw on missing file parameter', async ({ rejects }) => {
