@@ -132,7 +132,9 @@ module.exports = async function ({
   function scheduleRoll () {
     clearTimeout(rollTimeout)
     rollTimeout = setTimeout(() => {
+      const prevDate = date
       date = parseDate(dateFormat, frequencySpec)
+      if (dateFormat && date && date !== prevDate) number = 0
       fileName = buildFileName(file, date, ++number, extension)
       roll()
       frequencySpec.next = getNext(frequency)
