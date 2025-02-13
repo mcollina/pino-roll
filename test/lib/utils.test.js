@@ -20,7 +20,8 @@ const {
   getFileName,
   validateLimitOptions,
   validateDateFormat,
-  parseDate
+  parseDate,
+  identifyLogFile
 } = require('../../lib/utils')
 const { cleanAndCreateFolder, sleep } = require('../utils')
 
@@ -153,6 +154,33 @@ test('buildFileName()', async ({ equal, throws }) => {
   equal(buildFileName('my-file', '2024-09-26', 5, ext), 'my-file.2024-09-26.5.json', 'appends date, number and extension')
 })
 
+test('identifyLogFiles()', async ({ notOk, equal }) => {
+  const ext = 'json'
+  let b
+  b = buildFileName('my-file', null, 5, ext)
+  equal(b, identifyLogFile(b, 'my-file', null, ext).fileName, 'number + ext')
+  b = buildFileName('my-file', null, 5, undefined)
+  equal(b, identifyLogFile(b, 'my-file', null, null).fileName, 'number only')
+  b = buildFileName('my-file', '2024-09-26')
+  equal(b, identifyLogFile(b, 'my-file', 'yyyy-MM-dd').fileName, 'number(start)+date')
+  b = buildFileName('my-file', '2024-09-26-07')
+  equal(b, identifyLogFile(b, 'my-file', 'yyyy-MM-dd-hh').fileName, 'number(start)+date (hourly)')
+  b = buildFileName('my-file', '2024-09-26', 5)
+  equal(b, identifyLogFile(b, 'my-file', 'yyyy-MM-dd').fileName, 'number+date')
+  b = buildFileName('my-file', '2024-09-26', 5, ext)
+  equal(b, identifyLogFile(b, 'my-file', 'yyyy-MM-dd', ext).fileName, 'number+date+extension')
+  b = buildFileName('my-file', '2024-09-26', 5, '.json')
+  equal(b, identifyLogFile(b, 'my-file', 'yyyy-MM-dd', '.json').fileName, 'number+date+extension(with dot suffix)')
+  b = buildFileName('my-file', '2024-09-31', '5a', ext)
+  b = buildFileName('my-file', '2024-09-31', 5, ext)
+  notOk(identifyLogFile(b, 'my-file', 'yyyy-MM-dd', ext).fileName, 'number+invalid date+extension')
+  b = buildFileName('my-file', '2024-09-26', 5, 'notMyExtension')
+  notOk(identifyLogFile(b, 'my-file', 'yyyy-MM-dd', ext), 'number+date+invalid extension')
+  notOk(identifyLogFile('my-file.log', 'my-file'), 'invalid number in file name')
+  notOk(identifyLogFile('not any file can be log.txt', 'my-file'), 'invalid base file name')
+  notOk(identifyLogFile('my-file.extrasegment.txt', 'my-file'), 'unequal segment with expected')
+})
+
 test('validateDateFormat()', async ({ equal, throws }) => {
   equal(validateDateFormat('2024-09-26'), true, 'returns null on valid date format')
   equal(validateDateFormat('2024-09-26-10'), true, 'returns null on valid date time format')
@@ -239,6 +267,10 @@ test('validateLimitOptions()', async ({ doesNotThrow, throws }) => {
   throws(() => validateLimitOptions({ count: [] }), { message: 'limit.count must be a number greater than 0' }, 'throws when limit.count is not an number')
   throws(() => validateLimitOptions({ count: -2 }), { message: 'limit.count must be a number greater than 0' }, 'throws when limit.count is negative')
   throws(() => validateLimitOptions({ count: 0 }), { message: 'limit.count must be a number greater than 0' }, 'throws when limit.count is 0')
+  throws(() => validateLimitOptions({ count: 2, removeOtherLogFiles: 2 }), { message: 'limit.removeOtherLogFiles must be boolean' }, 'throws when limit.removeOtherLogFiles is not boolean')
+  throws(() => validateLimitOptions({ count: 2, removeOtherLogFiles: [] }), { message: 'limit.removeOtherLogFiles must be boolean' }, 'throws when limit.removeOtherLogFiles is not boolean')
+  throws(() => validateLimitOptions({ count: 2, removeOtherLogFiles: {} }), { message: 'limit.removeOtherLogFiles must be boolean' }, 'throws when limit.removeOtherLogFiles is not boolean')
+  throws(() => validateLimitOptions({ count: 2, removeOtherLogFiles: 'ok' }), { message: 'limit.removeOtherLogFiles must be boolean' }, 'throws when limit.removeOtherLogFiles is not boolean')
 })
 
 test('checkSymlink()', async ({ test, beforeEach }) => {
