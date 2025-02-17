@@ -67,7 +67,7 @@ You can specify any of [Sonic-Boom options](https://github.com/pinojs/sonic-boom
 
 * `limit.removeOtherLogFiles?`: boolean:  
 When true, will remove files not created by the current process. 
-When false/undefined, count limiattion will only apply to files created by the current process. 
+When false/undefined, count limitation will only apply to files created by the current process. 
 
 * `dateFormat?`: the format for appending the current date/time to the file name.
   When specified, appends the date/time in the provided format to the log file name.
