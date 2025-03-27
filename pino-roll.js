@@ -3,7 +3,7 @@
 const SonicBoom = require('sonic-boom')
 const {
   buildFileName,
-  checkFileRemoval,
+  removeOldFiles,
   createSymlink,
   detectLastNumber,
   parseSize,
@@ -57,6 +57,7 @@ const {
  * @typedef {object} LimitOptions
  *
  * @property {number} count? -number of log files, **in addition to the currently used file**.
+ * @property {boolean} removeOtherLogFiles? - when true, older file matching the log file format will also be removed.
  */
 
 /**
@@ -85,7 +86,7 @@ module.exports = async function ({
   const frequencySpec = parseFrequency(frequency)
 
   let date = parseDate(dateFormat, frequencySpec, true)
-  let number = await detectLastNumber(file, frequencySpec?.start)
+  let number = await detectLastNumber(file, frequencySpec?.start, dateFormat)
 
   let fileName = buildFileName(file, date, number, extension)
   const createdFileNames = [fileName]
@@ -124,15 +125,16 @@ module.exports = async function ({
       createSymlink(fileName)
     }
     if (limit) {
-      createdFileNames.push(fileName)
-      checkFileRemoval(createdFileNames, limit)
+      removeOldFiles({ ...limit, baseFile: file, dateFormat, extension, createdFileNames, newFileName: fileName })
     }
   }
 
   function scheduleRoll () {
     clearTimeout(rollTimeout)
     rollTimeout = setTimeout(() => {
+      const prevDate = date
       date = parseDate(dateFormat, frequencySpec)
+      if (dateFormat && date && date !== prevDate) number = 0
       fileName = buildFileName(file, date, ++number, extension)
       roll()
       frequencySpec.next = getNext(frequency)

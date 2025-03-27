@@ -65,15 +65,16 @@ You can specify any of [Sonic-Boom options](https://github.com/pinojs/sonic-boom
 
 * `limit.count?`: number of log files, **in addition to the currently used file**.
 
+* `limit.removeOtherLogFiles?`: boolean:  
+When true, will remove files not created by the current process. 
+When false/undefined, count limitation will only apply to files created by the current process. 
+
 * `dateFormat?`: the format for appending the current date/time to the file name.
   When specified, appends the date/time in the provided format to the log file name.
   Supports date formats from `date-fns` (see: [date-fns format documentation](https://date-fns.org/v4.1.0/docs/format)).
   For example:
     Daily: `'yyyy-MM-dd'` → `error.2024-09-24.log`
     Hourly: `'yyyy-MM-dd-hh'` → `error.2024-09-24-05.log`
-
-Please not that `limit` only considers **created log files**. It will not consider any pre-existing files.
-Therefore, starting your logger with a limit will never tries deleting older log files, created during previous executions.
 
 ## License
 
