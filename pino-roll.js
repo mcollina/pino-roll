@@ -139,8 +139,7 @@ module.exports = async function ({
       roll()
       frequencySpec.next = getNext(frequency)
       scheduleRoll()
-    }, frequencySpec.next - Date.now())
-    rollTimeout.unref()
+    }, frequencySpec.next - Date.now()).unref()
   }
 
   return destination
