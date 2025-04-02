@@ -152,6 +152,7 @@ test('buildFileName()', async ({ equal, throws }) => {
   equal(buildFileName('my-file', '2024-09-26-07'), 'my-file.2024-09-26-07.1', 'appends date and hour')
   equal(buildFileName('my-file', '2024-09-26', 5), 'my-file.2024-09-26.5', 'appends date and number')
   equal(buildFileName('my-file', '2024-09-26', 5, ext), 'my-file.2024-09-26.5.json', 'appends date, number and extension')
+  equal(buildFileName('somedir/'), join('somedir', '1'), 'does not add . after /')
 })
 
 test('identifyLogFiles()', async ({ notOk, equal }) => {
