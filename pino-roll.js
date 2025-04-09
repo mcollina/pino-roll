@@ -86,7 +86,7 @@ module.exports = async function ({
   const frequencySpec = parseFrequency(frequency)
 
   let date = parseDate(dateFormat, frequencySpec, true)
-  let number = await detectLastNumber(file, frequencySpec?.start, dateFormat)
+  let number = await detectLastNumber(file, frequencySpec?.start, extension)
 
   let fileName = buildFileName(file, date, number, extension)
   const createdFileNames = [fileName]

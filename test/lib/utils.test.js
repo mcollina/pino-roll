@@ -244,6 +244,23 @@ test('detectLastNumber()', async ({ test, beforeEach }) => {
     equal(await detectLastNumber(fileName, Date.now()), 1, 'ignores all files older than time')
   })
 
+  test('given existing files with a time with extension', async ({ equal }) => {
+    const fileName = join(folder, 'file.5.log')
+    await writeFile(join(folder, 'file.9.log'), '')
+    await writeFile(join(folder, 'file.10.log'), '')
+    await writeFile(join(folder, 'file.11'), '')
+    await sleep(100)
+    await writeFile(join(folder, 'file.2.log'), '', { flush: true })
+    await writeFile(join(folder, 'file.3.log'), '', { flush: true })
+    const { birthtimeMs } = await stat(join(folder, 'file.2.log'))
+    equal(await detectLastNumber(fileName, birthtimeMs - 150, 'log'), 10, 'considers only files with extension after provided time')
+    equal(await detectLastNumber(fileName, birthtimeMs - 150, '.log'), 10, 'normalizes extension with dot prefix')
+    equal(await detectLastNumber(fileName, birthtimeMs, 'log'), 3, 'ignores files older than time')
+    equal(await detectLastNumber(fileName, birthtimeMs, '.log'), 3, 'normalizes extension with dot prefix')
+    equal(await detectLastNumber(fileName, Date.now(), 'log'), 1, 'ignores all files older than time')
+    equal(await detectLastNumber(fileName, Date.now(), '.log'), 1, 'ignores all files older than time')
+  })
+
   test('given files without numbers', async ({ equal }) => {
     await writeFile(join(folder, 'file'), '')
     await writeFile(join(folder, 'file.5'), '')
