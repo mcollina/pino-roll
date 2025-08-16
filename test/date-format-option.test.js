@@ -20,7 +20,7 @@ test('rotate file with date format based on frequency', async ({ ok, rejects }) 
   stream.end()
 
   const fileName = `${file}.${format(new Date(), 'yyyy-MM-dd-hh')}`
-  const content = await readFile(`${fileName}.1`, 'utf8')
+  const content = await readFile(`${fileName}.1.log`, 'utf8')
   ok(content.includes('#1'), 'first file contains first log')
   ok(content.includes('#2'), 'first file contains second log')
   rejects(stat(`${fileName}.2`), 'no other files created')
@@ -38,18 +38,18 @@ test('rotate file based on custom time and date format', async ({ ok, notOk, rej
   stream.write('logged message #4\n')
   await sleep(110)
   stream.end()
-  await stat(`${fileName}.1`)
-  let content = await readFile(`${fileName}.1`, 'utf8')
+  await stat(`${fileName}.1.log`)
+  let content = await readFile(`${fileName}.1.log`, 'utf8')
   ok(content.includes('#1'), 'first file contains first log')
   ok(content.includes('#2'), 'first file contains second log')
   notOk(content.includes('#3'), 'first file does not contains third log')
-  await stat(`${fileName}.2`)
-  content = await readFile(`${fileName}.2`, 'utf8')
+  await stat(`${fileName}.2.log`)
+  content = await readFile(`${fileName}.2.log`, 'utf8')
   ok(content.includes('#3'), 'first file contains third log')
   ok(content.includes('#4'), 'first file contains fourth log')
   notOk(content.includes('#2'), 'first file does not contains second log')
-  await stat(`${fileName}.3`)
-  rejects(stat(`${fileName}.4`), 'no other files created')
+  await stat(`${fileName}.3.log`)
+  rejects(stat(`${fileName}.4.log`), 'no other files created')
 })
 
 test('rotate file based on size and date format', async ({ ok, rejects }) => {
@@ -62,14 +62,14 @@ test('rotate file based on size and date format', async ({ ok, rejects }) => {
   await once(stream, 'ready')
   stream.write('logged message #3\n')
   stream.end()
-  let stats = await stat(`${fileWithDate}.1`)
+  let stats = await stat(`${fileWithDate}.1.log`)
   ok(
     size <= stats.size && stats.size <= size * 2,
     `first file size: ${size} <= ${stats.size} <= ${size * 2}`
   )
-  stats = await stat(`${fileWithDate}.2`)
+  stats = await stat(`${fileWithDate}.2.log`)
   ok(stats.size <= size, `second file size: ${stats.size} <= ${size}`)
-  rejects(stat(`${fileWithDate}.3`), 'no other files created')
+  rejects(stat(`${fileWithDate}.3.log`), 'no other files created')
 })
 
 test('rotate file based on size and date format with custom frequency', async ({ ok, rejects }) => {
@@ -85,17 +85,17 @@ test('rotate file based on size and date format with custom frequency', async ({
   stream.write('logged message #4\n')
   stream.end()
 
-  let stats = await stat(`${fileWithDate}.1`)
+  let stats = await stat(`${fileWithDate}.1.log`)
   ok(
     size <= stats.size && stats.size <= size * 2,
     `first file size: ${size} <= ${stats.size} <= ${size * 2}`
   )
-  stats = await stat(`${fileWithDate}.2`)
+  stats = await stat(`${fileWithDate}.2.log`)
   ok(stats.size <= size, `second file size: ${stats.size} <= ${size}`)
-  stats = await stat(`${fileWithDate}.3`)
-  const content = await readFile(`${fileWithDate}.3`, 'utf8')
+  stats = await stat(`${fileWithDate}.3.log`)
+  const content = await readFile(`${fileWithDate}.3.log`, 'utf8')
   ok(content.includes('#4'), 'Rotated file should have the log')
-  rejects(stat(`${file}.4`), 'no other files created')
+  rejects(stat(`${file}.4.log`), 'no other files created')
 })
 
 test('rotate file based on size and date format without frequency', async ({ ok, rejects }) => {
@@ -107,14 +107,14 @@ test('rotate file based on size and date format without frequency', async ({ ok,
   await once(stream, 'ready')
   stream.write('logged message #3\n')
   stream.end()
-  let stats = await stat(`${file}.1`)
+  let stats = await stat(`${file}.1.log`)
   ok(
     size <= stats.size && stats.size <= size * 2,
     `first file size: ${size} <= ${stats.size} <= ${size * 2}`
   )
-  stats = await stat(`${file}.2`)
+  stats = await stat(`${file}.2.log`)
   ok(stats.size <= size, `second file size: ${stats.size} <= ${size}`)
-  rejects(stat(`${file}.3`), 'no other files created')
+  rejects(stat(`${file}.3.log`), 'no other files created')
 })
 
 test('throw on invalid date format', async ({ rejects }) => {
