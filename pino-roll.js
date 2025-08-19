@@ -12,7 +12,9 @@ const {
   getFileSize,
   validateLimitOptions,
   parseDate,
-  validateDateFormat
+  validateDateFormat,
+  sanitizeFile,
+  validateFileName
 } = require('./lib/utils')
 
 /**
@@ -83,11 +85,15 @@ module.exports = async function ({
 } = {}) {
   validateLimitOptions(limit)
   validateDateFormat(dateFormat)
+  validateFileName(file)
   const frequencySpec = parseFrequency(frequency)
 
   let date = parseDate(dateFormat, frequencySpec, true)
-  let number = await detectLastNumber(file, frequencySpec?.start, extension)
+  const sanitizedFile = sanitizeFile(file)
+  file = sanitizedFile.file
+  extension = sanitizedFile.extension
 
+  let number = await detectLastNumber(file, frequencySpec?.start, extension)
   let fileName = buildFileName(file, date, number, extension)
   const createdFileNames = [fileName]
   let currentSize = await getFileSize(fileName)

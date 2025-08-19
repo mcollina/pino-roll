@@ -36,45 +36,85 @@ Automatically rolls your files based on a given frequency, size, or both.
 
 You can specify any of [Sonic-Boom options](https://github.com/pinojs/sonic-boom#sonicboomopts) _except `dest`_
 
-* `file`: absolute or relative path to the log file.
-  Your application needs the write right on the parent folder.
-  Number will be appened to this file name.
-  When the parent folder already contains numbered files, numbering will continue based on the highest number.
-  If this path does not exist, the logger with throw an error unless you set `mkdir` to `true`.
-  `file` may also be a function that returns a string.
+* **`file`**: `string | () => string`
 
-* `size?`: the maximum size of a given log file.
-  Can be combined with frequency.
-  Use `k`, `m` and `g` to express values in KB, MB or GB.
-  Numerical values will be considered as MB.
+  - Absolute or relative path to the log file.
+  - Your application must have write access to the parent folder.
+  - A rotation number will be appended to this filename.
+  - When the parent folder already contains numbered files, numbering will continue based on the highest number.
+  - If this path does not exist, the logger will throw an error unless you set `mkdir` to `true`.
+  - `file` may also be a function that returns a string.
 
-* `frequency?`: the amount of time a given log file is used.
-  Can be combined with size.
-  Use `daily` or `hourly` to rotate file every day (or every hour).
-  Existing file within the current day (or hour) will be re-used.
-  Numerical values will be considered as a number of milliseconds.
-  Using a numerical value will result in a file during start/end of the frequency specified.
+  - To ensure consistency, rotated filenames now always follow the **Extension Last Format** convention:
+    ```
+    filename.date.count.extension
+    (e.g., prod.2025-08-19.1.log)
+    ```
+    > The date segment is optional.
 
-* `extension?`: appends the provided string after the file number.
+    - When no filename (e.g., `logs/`) or if a directory is passed, a default filename `app.log` will be used.
 
-* `symlink?`: creates a symlink to the current log file.
-  The symlink will be updated to the latest log file upon rotation.
-  The name of the symlink is always called `current.log`.
+      Resulting file: `logs/app.2025-08-19.1.log`.
 
-* `limit?`: strategy used to remove oldest files when rotating them:
+    - If a filename is provided without an extension (e.g., `logs/app`), the default extension `.log` will be used.
+    - If a filename with an extension is provided (e.g., `logs/app.log`) and an explicit extension is set (e.g., `.json`), the explicit extension takes precedence → `logs/app.json`.
 
-* `limit.count?`: number of log files, **in addition to the currently used file**.
+  - **Filename validation:**
+    - Filenames are validated against Windows path restrictions.
+    - Disallowed characters: `< > : " | ? *` (to ensure cross-platform safety).
 
-* `limit.removeOtherLogFiles?`: boolean:  
-When true, will remove files not created by the current process. 
-When false/undefined, count limitation will only apply to files created by the current process. 
+* **`size?`**: `number | string`
 
-* `dateFormat?`: the format for appending the current date/time to the file name.
-  When specified, appends the date/time in the provided format to the log file name.
-  Supports date formats from `date-fns` (see: [date-fns format documentation](https://date-fns.org/v4.1.0/docs/format)).
-  For example:
-    Daily: `'yyyy-MM-dd'` → `error.2024-09-24.log`
-    Hourly: `'yyyy-MM-dd-hh'` → `error.2024-09-24-05.log`
+  - Maximum size of a single log file before rotation.
+  - Can be combined with frequency.
+  - Accepts units:
+    - `k` -> kilobytes (KB)
+    - `m` -> megabytes (MB)
+    - `g` -> gigabytes (GB)
+  - If no unit is provided:
+    - **Numbers** are interpreted as MB.
+    - Strings without units (e.g., "100") are also treated as MB.
+  - Rotation occurs as soon as the file size reaches or exceeds the specified limit.
+
+* **`frequency?`**: `number | string` 
+  - The amount of time a given log file is used.
+  - Can be combined with size.
+  - Accepted values:
+    - `daily` -> rotates the file once per day.
+    - `hourly` -> rotates the file once per hour.
+    - Number -> interpreted as milliseconds.
+  - When using `daily` or `hourly`, any existing file for the current period will be reused.
+  - When using a *numeric value*, rotation happens at the start/end of each specified interval.
+
+* **`extension?`**: `string`
+  - The file extension to use for rotated log files.
+  - Default: `.log`
+  - Default extension only applied if the provided filename does not already contain an extension.
+
+* **`symlink?`**: `boolean` 
+  - If enabled, creates a symbolic link (`current.log`) pointing to the active log file.
+  - On each rotation, the symlink is updated to reference the newly created log file.
+  - Default: `false`
+
+* **`limit?`**: `object` 
+  - Defines the strategy for removing old log files during rotation.
+  - Supports two optional properties: `count` and `removeOtherLogFiles`.
+
+  * **`limit.count?`**: `number`
+    - Maximum number of log files to retain in addition to the active file.
+    - For example, if count is 3, a total of 4 files will be kept (3 rotated + 1 active).
+
+  * **`limit.removeOtherLogFiles?`**: `boolean`
+    - When `true`, will remove files not created by the current process. 
+    - When `false` or `undefined`, the `count` limit only applies to files generated by the current process.
+
+* **`dateFormat?`**: `string` 
+  - Defines the format for appending the current date/time to the log file name.
+  - When specified, appends the date/time in the provided format to the log file name.
+  - Supports date formats from `date-fns` (see: [date-fns format documentation](https://date-fns.org/v4.1.0/docs/format)).
+  - For example:
+    - Daily: `'yyyy-MM-dd'` -> `error.2024-09-24.log`
+    - Hourly: `'yyyy-MM-dd-hh'` -> `error.2024-09-24-05.log`
 
 ## License
 

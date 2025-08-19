@@ -24,18 +24,18 @@ test('rotate file based on time', async ({ ok, notOk, rejects }) => {
   stream.write('logged message #4\n')
   await sleep(110)
   stream.end()
-  await stat(`${file}.1`)
-  let content = await readFile(`${file}.1`, 'utf8')
+  await stat(`${file}.1.log`)
+  let content = await readFile(`${file}.1.log`, 'utf8')
   ok(content.includes('#1'), 'first file contains first log')
   ok(content.includes('#2'), 'first file contains second log')
   notOk(content.includes('#3'), 'first file does not contains third log')
-  await stat(`${file}.2`)
-  content = await readFile(`${file}.2`, 'utf8')
+  await stat(`${file}.2.log`)
+  content = await readFile(`${file}.2.log`, 'utf8')
   ok(content.includes('#3'), 'second file contains third log')
   ok(content.includes('#4'), 'second file contains fourth log')
   notOk(content.includes('#2'), 'second file does not contains second log')
-  await stat(`${file}.3`)
-  rejects(stat(`${file}.4`), 'no other files created')
+  await stat(`${file}.3.log`)
+  rejects(stat(`${file}.4.log`), 'no other files created')
 })
 
 test('rotate file based on time and parse filename func', async ({ ok, notOk, rejects }) => {
@@ -62,28 +62,28 @@ test('rotate file based on size', async ({ ok, rejects }) => {
   stream.write('logged message #2\n')
   await once(stream, 'ready')
   stream.write('logged message #3\n')
-  let stats = await stat(`${file}.1`)
+  let stats = await stat(`${file}.1.log`)
   ok(
     size <= stats.size && stats.size <= size * 2,
     `first file size: ${size} <= ${stats.size} <= ${size * 2}`
   )
-  stats = await stat(`${file}.2`)
+  stats = await stat(`${file}.2.log`)
   ok(stats.size <= size, `second file size: ${stats.size} <= ${size}`)
-  rejects(stat(`${file}.3`), 'no other files created')
+  rejects(stat(`${file}.3.log`), 'no other files created')
 })
 
 test('resume writing in last file', async ({ equal, rejects }) => {
   const file = join(logFolder, 'log')
   const previousContent = '--previous content--\n'
   const newContent = 'logged message #1\n'
-  await writeFile(`${file}.6`, previousContent)
+  await writeFile(`${file}.6.log`, previousContent)
   const size = 20
   const stream = await buildStream({ size: `${size}o`, file })
   stream.write(newContent)
   await sleep(10)
 
   equal(
-    await readFile(`${file}.6`, 'utf8'),
+    await readFile(`${file}.6.log`, 'utf8'),
     `${previousContent}${newContent}`,
     'old and new content were written'
   )
@@ -102,15 +102,15 @@ test('remove files based on count', async ({ ok, rejects }) => {
     await sleep(20)
   }
   stream.end()
-  await stat(`${file}.2`)
-  let content = await readFile(`${file}.2`, 'utf8')
+  await stat(`${file}.2.log`)
+  let content = await readFile(`${file}.2.log`, 'utf8')
   ok(content.includes('#3'), 'second file contains thrid log')
   ok(content.includes('#4'), 'second file contains fourth log')
-  await stat(`${file}.3`)
-  content = await readFile(`${file}.3`, 'utf8')
+  await stat(`${file}.3.log`)
+  content = await readFile(`${file}.3.log`, 'utf8')
   ok(content.includes('#5'), 'third file contains fifth log')
-  await rejects(stat(`${file}.1`), 'first file was deleted')
-  await rejects(stat(`${file}.4`), 'no other files created')
+  await rejects(stat(`${file}.1.log`), 'first file was deleted')
+  await rejects(stat(`${file}.4.log`), 'no other files created')
 })
 
 test('removeOtherOldFiles()', async ({ ok, notOk }) => {
@@ -150,8 +150,8 @@ test('do not remove pre-existing file when removing files based on count', async
   rejects
 }) => {
   const file = join(logFolder, 'log')
-  await writeFile(`${file}.1`, 'oldest content')
-  await writeFile(`${file}.2`, 'old content')
+  await writeFile(`${file}.1.log`, 'oldest content')
+  await writeFile(`${file}.2.log`, 'old content')
   const stream = await buildStream({
     size: '20b',
     file,
@@ -162,21 +162,21 @@ test('do not remove pre-existing file when removing files based on count', async
     await sleep(20)
   }
   stream.end()
-  await stat(`${file}.1`)
-  let content = await readFile(`${file}.1`, 'utf8')
+  await stat(`${file}.1.log`)
+  let content = await readFile(`${file}.1.log`, 'utf8')
   equal(content, 'oldest content', 'oldest file was not touched')
-  await stat(`${file}.3`)
-  content = await readFile(`${file}.3`, 'utf8')
+  await stat(`${file}.3.log`)
+  content = await readFile(`${file}.3.log`, 'utf8')
   ok(content.includes('#3'), 'second file contains third log')
-  await stat(`${file}.4`)
-  content = await readFile(`${file}.4`, 'utf8')
+  await stat(`${file}.4.log`)
+  content = await readFile(`${file}.4.log`, 'utf8')
   ok(content.includes('#4'), 'third file contains fourth log')
   ok(content.includes('#5'), 'third file contains fifth log')
-  await stat(`${file}.5`)
-  content = await readFile(`${file}.5`, 'utf8')
+  await stat(`${file}.5.log`)
+  content = await readFile(`${file}.5.log`, 'utf8')
   ok(content.includes('#6'), 'fourth file contains sixth log')
-  await rejects(stat(`${file}.2`), 'resumed file was deleted')
-  await rejects(stat(`${file}.6`), 'no other files created')
+  await rejects(stat(`${file}.2.log`), 'resumed file was deleted')
+  await rejects(stat(`${file}.6.log`), 'no other files created')
 })
 
 test('remove pre-existing log files when removing files based on count when limit.removeOtherLogFiles', async ({
@@ -206,14 +206,14 @@ test('remove pre-existing log files when removing files based on count when limi
     if (i < 3) await sleep(550)
   }
   stream.end()
-  rejects(stat(`${prevFile}.1`), 'oldest file was deleted')
+  rejects(stat(`${prevFile}.1.log`), 'oldest file was deleted')
   let content = await readFile(notLogFileName, 'utf8')
   ok(content.includes('not a log file'), 'non-log file is untouched')
-  content = await readFile(`${file1}.2`, 'utf8')
+  content = await readFile(`${file1}.2.log`, 'utf8')
   ok(content.includes('#2'), 'TS1 - 2 file contains second log')
-  content = await readFile(`${file2}.1`, 'utf8')
+  content = await readFile(`${file2}.1.log`, 'utf8')
   ok(content.includes('#3'), 'TS2 - 1 file contains third log')
-  rejects(stat(`${file2}.2`), 'no other files created')
+  rejects(stat(`${file2}.2.log`), 'no other files created')
 })
 
 test('throw on missing file parameter', async ({ rejects }) => {
@@ -228,7 +228,7 @@ test('throw on unexisting folder without mkdir', async ({ rejects }) => {
   const file = join('unknown', 'folder', 'file')
   rejects(
     buildStream({ file }),
-    { message: `ENOENT: no such file or directory, open '${file}.1'` },
+    { message: `ENOENT: no such file or directory, open '${file}.1.log'` },
     'throws on unexisting folder'
   )
 })
@@ -292,7 +292,7 @@ test('creates symlink if prop is set', async ({ equal, resolves }) => {
   await sleep(200)
   await resolves(lstat(linkPath), 'symlink was created')
   const linkTarget = await readlink(linkPath)
-  equal(linkTarget, 'log.1', 'symlink points to the correct file')
+  equal(linkTarget, 'log.1.log', 'symlink points to the correct file')
   const content = await readFile(linkPath, 'utf8')
   equal(content, 'test content\n', 'symlink contains correct content')
 })
@@ -311,7 +311,7 @@ test('symlink rotates on roll', async ({ equal, ok, resolves }) => {
   await sleep(200)
   await resolves(lstat(linkPath), 'symlink was created')
   const linkTarget = await readlink(linkPath)
-  equal(linkTarget, 'log.2', 'symlink points to the correct file')
+  equal(linkTarget, 'log.2.log', 'symlink points to the correct file')
   const content = await readFile(linkPath, 'utf8')
   ok(content.includes('#4'), 'symlink contains fourth log')
 })

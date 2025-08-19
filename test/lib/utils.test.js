@@ -21,7 +21,9 @@ const {
   validateLimitOptions,
   validateDateFormat,
   parseDate,
-  identifyLogFile
+  identifyLogFile,
+  sanitizeFile,
+  validateFileName
 } = require('../../lib/utils')
 const { cleanAndCreateFolder, sleep } = require('../utils')
 
@@ -352,4 +354,47 @@ test('createSymlink()', async ({ beforeEach }) => {
     const fileName = join(folder, 'file1.log')
     equal(false, await createSymlink(fileName), 'returns false when symlink already exists')
   })
+})
+
+test('sanitizeFile()', async () => {
+  test('throws an error when no file name is provided', async ({ throws }) => {
+    throws(() => sanitizeFile(), 'should throw when called without arguments')
+    throws(() => sanitizeFile(null, 'ext'), 'should throw when file name is null, even if extension is provided')
+    throws(() => sanitizeFile(() => null), 'should throw when function returns null')
+  })
+
+  test('handles file name provided as a function', async ({ same }) => {
+    same(sanitizeFile(() => 'my-func'), { file: 'my-func', extension: 'log' }, 'should resolve the function output and append the default extension')
+    same(sanitizeFile(() => './logs/my-func', 'ext'), { file: './logs/my-func', extension: 'ext' }, 'should resolve the function output and append the provided extension')
+    same(sanitizeFile(() => './logs/my-func.json'), { file: './logs/my-func', extension: 'json' }, 'should resolve the function output and extract the existing extension')
+    same(sanitizeFile(() => './logs/my-func.log', 'json'), { file: './logs/my-func', extension: 'json' }, 'should resolve the function output, remove the extension from the file and append the provided extension')
+  })
+
+  test('handles cases where an explicit extension is provided', async ({ same }) => {
+    same(sanitizeFile('./logs/', 'ext'), { file: './logs/app', extension: 'ext' }, 'should append the default file name and use the provided extension')
+    same(sanitizeFile('./logs/my-file', '.ext'), { file: './logs/my-file', extension: '.ext' }, 'should keep file name unchanged and use the provided extension')
+    same(sanitizeFile('./logs/my-file.log', '.ext'), { file: './logs/my-file', extension: '.ext' }, 'should remove the existing extension and append the provided extension')
+  })
+
+  test('handles cases where no extension is provided', async ({ same }) => {
+    same(sanitizeFile('./logs/'), { file: './logs/app', extension: 'log' }, 'should append the default file name and default extension')
+    same(sanitizeFile('./logs/my-file'), { file: './logs/my-file', extension: 'log' }, 'should keep file name unchanged and append the default extension')
+    same(sanitizeFile('./logs/my-file.json'), { file: './logs/my-file', extension: 'json' }, 'should extract the file extension and use the extracted extension')
+  })
+
+  test('handles files with multiple extensions', async ({ same }) => {
+    same(sanitizeFile('./logs/my-file.log.json'), { file: './logs/my-file.log', extension: 'json' }, 'should extract the last extension, keep the file name intact and append the extracted extension')
+    same(sanitizeFile('./logs/my-file.log.ab.xyz', 'ext'), { file: './logs/my-file.log.ab', extension: 'ext' }, 'should remove the last extension, keep the file name intact and append provided extension')
+    same(sanitizeFile('./logs/my-file.prod.log.', 'json'), { file: './logs/my-file.prod.log', extension: 'json' }, 'should remove trailing dot, keep the file name intact and append provided extension')
+    same(sanitizeFile('./logs/my-file.prod.log.'), { file: './logs/my-file.prod.log', extension: 'log' }, 'should remove trailing dot and append default extension, rare case (handles rare `.log.log` case)')
+  })
+})
+
+test('validateFileName()', async ({ throws, equal }) => {
+  throws(() => validateFileName(), 'should throw when called without arguments')
+  throws(() => validateFileName(null), 'should throw when file name is null')
+  throws(() => validateFileName(() => null), 'should throw when function returns null')
+  throws(() => validateFileName('./logs/my-file||.log'), 'should throw when file name contains invalid characters')
+  throws(() => validateFileName(() => './logs/my<file?log'), 'should throw when function returns file name that contains invalid characters')
+  equal(validateFileName('./logs/my-file.log'), true, 'should validate a correct file path as true')
 })
