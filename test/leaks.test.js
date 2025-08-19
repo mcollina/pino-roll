@@ -1,12 +1,14 @@
 'use strict'
-const { test, setTimeout, ok } = require('tap')
+const { it } = require('node:test')
+const assert = require('node:assert')
 const build = require('..')
 const { join } = require('path')
+const { tmpdir } = require('os')
 const { cleanAndCreateFolder } = require('./utils')
 
-test('roll does not prevent process end', async (t) => {
-  const logFolder = join('logs', 'leaks')
+it('roll does not prevent process end', async () => {
+  const logFolder = join(tmpdir(), 'pino-roll-tests', 'leaks')
   await cleanAndCreateFolder(logFolder)
   const stream = await build({ file: join(logFolder, 'logfile'), frequency: 100 })
-  ok(stream)
-}).finally(() => setTimeout(1000))
+  assert.ok(stream)
+})

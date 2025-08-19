@@ -4,10 +4,10 @@
   "description": "A Pino transport that automatically rolls your log files",
   "main": "pino-roll.js",
   "scripts": {
-    "dev": "tap -w -R spec",
+    "dev": "node --test --watch",
     "prepare": "husky install",
-    "test": "standard | snazzy && tap",
-    "test-ci": "standard | snazzy && tap --coverage-report=lcovonly"
+    "test": "standard | snazzy && node --test",
+    "test-ci": "standard | snazzy && node --test --experimental-test-coverage"
   },
   "repository": {
     "type": "git",
@@ -31,7 +31,6 @@
     "mockdate": "^3.0.5",
     "pino": "^10.0.0",
     "snazzy": "^9.0.0",
-    "standard": "^17.0.0-2",
-    "tap": "^16.0.1"
+    "standard": "^17.0.0-2"
   }
 }
