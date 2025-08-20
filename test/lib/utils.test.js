@@ -3,7 +3,6 @@
 const { addDays, addHours, startOfDay, startOfHour } = require('date-fns')
 const { writeFile, rm, stat, readlink, symlink } = require('fs/promises')
 const { join } = require('path')
-const { tmpdir } = require('os')
 const { describe, it, beforeEach } = require('node:test')
 const assert = require('node:assert')
 const { format } = require('date-fns')
@@ -27,7 +26,7 @@ const {
   sanitizeFile,
   validateFileName
 } = require('../../lib/utils')
-const { cleanAndCreateFolder, sleep } = require('../utils')
+const { createTempTestDir, sleep } = require('../utils')
 
 it('parseSize()', async () => {
   assert.strictEqual(parseSize(), null, 'returns null on empty input')
@@ -204,8 +203,10 @@ it('parseDate()', async () => {
 })
 
 describe('getFileSize()', () => {
-  const folder = join(tmpdir(), 'pino-roll-tests', 'utils')
-  beforeEach(() => cleanAndCreateFolder(folder))
+  let folder
+  beforeEach(() => {
+    folder = createTempTestDir()
+  })
 
   it('given an existing file', async () => {
     const fileName = join(folder, 'file.log')
@@ -221,8 +222,10 @@ describe('getFileSize()', () => {
 })
 
 describe('detectLastNumber()', () => {
-  const folder = join(tmpdir(), 'pino-roll-tests', 'utils')
-  beforeEach(() => cleanAndCreateFolder(folder))
+  let folder
+  beforeEach(() => {
+    folder = createTempTestDir()
+  })
 
   it('given existing files', async () => {
     const fileName = join(folder, 'file.5')
@@ -295,11 +298,11 @@ it('validateLimitOptions()', async () => {
 })
 
 describe('checkSymlink()', () => {
-  const folder = join(tmpdir(), 'pino-roll-tests', 'utils')
-  const other = join(folder, 'other')
+  let folder, other
   beforeEach(async () => {
-    await cleanAndCreateFolder(folder)
-    await cleanAndCreateFolder(other)
+    folder = createTempTestDir()
+    other = join(folder, 'other')
+    await require('fs/promises').mkdir(other, { recursive: true })
   })
 
   it('given a new symlink (should return true)', async () => {
@@ -340,8 +343,10 @@ describe('checkSymlink()', () => {
 })
 
 describe('createSymlink()', () => {
-  const folder = join(tmpdir(), 'pino-roll-tests', 'utils')
-  beforeEach(() => cleanAndCreateFolder(folder))
+  let folder
+  beforeEach(() => {
+    folder = createTempTestDir()
+  })
 
   it('given a new symlink (should create symlink)', async () => {
     const fileName = join(folder, 'file1.log')
