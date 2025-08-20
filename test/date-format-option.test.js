@@ -27,6 +27,7 @@ it('rotate file with date format based on frequency', async () => {
   stream.write('logged message #1\n')
   stream.write('logged message #2\n')
   stream.end()
+  await once(stream, 'close')
 
   const fileName = `${file}.${format(new Date(), 'yyyy-MM-dd-hh')}`
   const content = await readFile(`${fileName}.1.log`, 'utf8')
@@ -89,8 +90,8 @@ it('rotate file based on custom time and date format', async () => {
 
   stream.end()
 
-  // Wait for stream to finish
-  await sleep(50)
+  // Wait for stream to close properly
+  await once(stream, 'close')
 
   // Find all dated log files
   const logFiles = []
@@ -144,6 +145,7 @@ it('rotate file based on size and date format', async () => {
   await once(stream, 'ready')
   stream.write('logged message #3\n')
   stream.end()
+  await once(stream, 'close')
   let stats = await stat(`${fileWithDate}.1.log`)
   assert.ok(
     size <= stats.size && stats.size <= size * 2,
@@ -170,6 +172,7 @@ it('rotate file based on size and date format with custom frequency', async () =
   await sleep(1010)
   stream.write('logged message #4\n')
   stream.end()
+  await once(stream, 'close')
 
   let stats = await stat(`${fileWithDate}.1.log`)
   assert.ok(
@@ -193,6 +196,7 @@ it('rotate file based on size and date format without frequency', async () => {
   await once(stream, 'ready')
   stream.write('logged message #3\n')
   stream.end()
+  await once(stream, 'close')
   let stats = await stat(`${file}.1.log`)
   assert.ok(
     size <= stats.size && stats.size <= size * 2,

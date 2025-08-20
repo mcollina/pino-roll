@@ -140,9 +140,7 @@ it('rotate file based on time and parse filename func', async () => {
   stream.write('logged message #4\n')
 
   stream.end()
-
-  // Give time for final operations
-  await sleep(50)
+  await once(stream, 'close')
 
   const files = await readdir(logFolder)
   const logFiles = files.filter(f => f.endsWith('.log'))
@@ -197,6 +195,7 @@ it('remove files based on count', async () => {
     await sleep(20)
   }
   stream.end()
+  await once(stream, 'close')
   await stat(`${file}.2.log`)
   let content = await readFile(`${file}.2.log`, 'utf8')
   assert.ok(content.includes('#3'), 'second file contains thrid log')
@@ -253,6 +252,7 @@ it('do not remove pre-existing file when removing files based on count', async (
     await sleep(20)
   }
   stream.end()
+  await once(stream, 'close')
   await stat(`${file}.1.log`)
   let content = await readFile(`${file}.1.log`, 'utf8')
   assert.strictEqual(content, 'oldest content', 'oldest file was not touched')
@@ -329,6 +329,7 @@ it('remove pre-existing log files when removing files based on count when limit.
   }, { description: 'file limit to be enforced' })
 
   stream.end()
+  await once(stream, 'close')
 
   // Verify the non-log file is untouched
   const nonLogContent = await readFile(notLogFileName, 'utf8')
@@ -431,7 +432,7 @@ it('creates symlink if prop is set', async () => {
   const stream = await buildStream({ file, symlink: true })
   stream.write('test content\n')
   stream.end()
-  await sleep(200)
+  await once(stream, 'close')
   await assert.doesNotReject(lstat(linkPath), 'symlink was created')
   const linkTarget = await readlink(linkPath)
   assert.strictEqual(linkTarget, 'log.1.log', 'symlink points to the correct file')
@@ -482,9 +483,7 @@ it('symlink rotates on roll', async () => {
   await sleep(100)
 
   stream.end()
-
-  // Wait for stream to finish
-  await sleep(50)
+  await once(stream, 'close')
 
   // Verify symlink still exists and points to a valid file
   await lstat(linkPath)
