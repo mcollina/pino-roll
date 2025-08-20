@@ -7,7 +7,7 @@
     "dev": "node --test --watch",
     "prepare": "husky install",
     "test": "standard | snazzy && node --test",
-    "test-ci": "standard | snazzy && node --test --experimental-test-coverage"
+    "test-ci": "standard | snazzy && c8 --reporter=lcovonly node --test"
   },
   "repository": {
     "type": "git",
@@ -27,6 +27,7 @@
     "sonic-boom": "^4.0.1"
   },
   "devDependencies": {
+    "c8": "^10.1.3",
     "husky": "^9.0.11",
     "mockdate": "^3.0.5",
     "pino": "^10.0.0",
