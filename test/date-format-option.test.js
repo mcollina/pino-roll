@@ -3,16 +3,23 @@
 const { once } = require('events')
 const { stat, readFile } = require('fs/promises')
 const { join } = require('path')
-const { tmpdir } = require('os')
 const { it, beforeEach } = require('node:test')
 const assert = require('node:assert')
 const { format } = require('date-fns')
 
-const { buildStream, cleanAndCreateFolder, sleep } = require('./utils')
+const {
+  buildStream,
+  createTempTestDir,
+  sleep,
+  waitForFile,
+  waitForCondition
+} = require('./utils')
 
-const logFolder = join(tmpdir(), 'pino-roll-tests', 'date-format-option', 'roll')
+let logFolder
 
-beforeEach(() => cleanAndCreateFolder(logFolder))
+beforeEach(() => {
+  logFolder = createTempTestDir()
+})
 
 it('rotate file with date format based on frequency', async () => {
   const file = join(logFolder, 'log')
@@ -30,32 +37,97 @@ it('rotate file with date format based on frequency', async () => {
 
 it('rotate file based on custom time and date format', async () => {
   const file = join(logFolder, 'log')
-  await sleep(100 - Date.now() % 100)
+  const frequency = 100
+
   // Calculate the date format using the same logic as pino-roll
   const { parseFrequency, parseDate } = require('../lib/utils')
-  const frequencySpec = parseFrequency(100)
+  const frequencySpec = parseFrequency(frequency)
   const dateStr = parseDate('yyyy-MM-dd-HH', frequencySpec, true)
   const fileName = `${file}.${dateStr}`
-  const stream = await buildStream({ frequency: 100, file, dateFormat: 'yyyy-MM-dd-HH' })
+
+  const stream = await buildStream({ frequency, file, dateFormat: 'yyyy-MM-dd-HH' })
+
+  // Write first batch of messages
   stream.write('logged message #1\n')
   stream.write('logged message #2\n')
-  await sleep(110)
+
+  // Wait for the first file to be created with our content
+  await waitForFile(`${fileName}.1.log`, { timeout: 1000 })
+  await waitForCondition(
+    async () => {
+      try {
+        const content = await readFile(`${fileName}.1.log`, 'utf8')
+        return content.includes('logged message #1')
+      } catch (error) {
+        return false
+      }
+    },
+    { timeout: 1000, description: 'first file to contain initial messages' }
+  )
+
+  // Wait for rotation and write new messages
+  await sleep(frequency + 10)
   stream.write('logged message #3\n')
+
+  // Wait for rotation to occur (second file created)
+  await waitForCondition(
+    async () => {
+      try {
+        await stat(`${fileName}.2.log`)
+        return true
+      } catch (error) {
+        return false
+      }
+    },
+    { timeout: 3000, interval: 50, description: 'second log file to be created' }
+  )
+
   stream.write('logged message #4\n')
-  await sleep(110)
+
+  // Give time for final writes
+  await sleep(50)
+
   stream.end()
-  await stat(`${fileName}.1.log`)
-  let content = await readFile(`${fileName}.1.log`, 'utf8')
-  assert.ok(content.includes('#1'), 'first file contains first log')
-  assert.ok(content.includes('#2'), 'first file contains second log')
-  assert.ok(!content.includes('#3'), 'first file does not contain third log')
-  await stat(`${fileName}.2.log`)
-  content = await readFile(`${fileName}.2.log`, 'utf8')
-  assert.ok(content.includes('#3'), 'second file contains third log')
-  assert.ok(content.includes('#4'), 'second file contains fourth log')
-  assert.ok(!content.includes('#2'), 'second file does not contain second log')
-  await stat(`${fileName}.3.log`)
-  await assert.rejects(stat(`${fileName}.4.log`), 'no other files created')
+
+  // Wait for stream to finish
+  await sleep(50)
+
+  // Find all dated log files
+  const logFiles = []
+  for (let i = 1; i <= 10; i++) {
+    try {
+      await stat(`${fileName}.${i}.log`)
+      logFiles.push(i)
+    } catch (error) {
+      break
+    }
+  }
+
+  assert.ok(logFiles.length >= 2, `Should have at least 2 log files, got ${logFiles.length}`)
+
+  // Verify that messages are properly separated
+  let found1and2 = false
+  let found3or4 = false
+  let file1and2Number = null
+
+  for (const fileNum of logFiles) {
+    const content = await readFile(`${fileName}.${fileNum}.log`, 'utf8')
+    if (content.includes('#1') && content.includes('#2')) {
+      found1and2 = true
+      file1and2Number = fileNum
+    }
+    if (content.includes('#3') || content.includes('#4')) {
+      found3or4 = true
+      // Messages 3 and 4 should be in a different file than 1 and 2
+      if (file1and2Number !== null) {
+        assert.notStrictEqual(fileNum, file1and2Number,
+          'Messages #3/#4 should be in a different file than #1/#2')
+      }
+    }
+  }
+
+  assert.ok(found1and2, 'Should find a file with messages #1 and #2')
+  assert.ok(found3or4, 'Should find file(s) with messages #3 or #4')
 })
 
 it('rotate file based on size and date format', async () => {

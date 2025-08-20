@@ -5,9 +5,9 @@
   "main": "pino-roll.js",
   "scripts": {
     "dev": "node --test --watch",
-    "prepare": "husky install",
-    "test": "standard | snazzy && node --test",
-    "test-ci": "standard | snazzy && c8 --reporter=lcovonly node --test"
+    "lint": "eslint",
+    "test": "eslint && node --test",
+    "test-ci": "eslint && c8 --reporter=lcovonly node --test"
   },
   "repository": {
     "type": "git",
@@ -27,11 +27,14 @@
     "sonic-boom": "^4.0.1"
   },
   "devDependencies": {
+    "@fastify/pre-commit": "^2.2.0",
     "c8": "^10.1.3",
-    "husky": "^9.0.11",
+    "eslint": "^9.33.0",
     "mockdate": "^3.0.5",
-    "pino": "^10.0.0",
-    "snazzy": "^9.0.0",
-    "standard": "^17.0.0-2"
-  }
+    "neostandard": "^0.12.2",
+    "pino": "^10.0.0"
+  },
+  "pre-commit": [
+    "test"
+  ]
 }
