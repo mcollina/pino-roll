@@ -404,4 +404,27 @@ it('validateFileName()', async () => {
   assert.throws(() => validateFileName('./logs/my-file||.log'), 'should throw when file name contains invalid characters')
   assert.throws(() => validateFileName(() => './logs/my<file?log'), 'should throw when function returns file name that contains invalid characters')
   assert.strictEqual(validateFileName('./logs/my-file.log'), true, 'should validate a correct file path as true')
+
+  // Windows path validation tests
+  // Valid Windows paths should pass
+  assert.strictEqual(validateFileName('C:\\Users\\test\\logfile.log'), true, 'should validate Windows absolute path with drive letter')
+  assert.strictEqual(validateFileName('D:\\projects\\app.log'), true, 'should validate Windows path with different drive letter')
+  assert.strictEqual(validateFileName('C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\pino-roll-test-QvV9cz\\logfile'), true, 'should validate Windows temp path with tilde')
+  assert.strictEqual(validateFileName('C:\\Program Files (x86)\\app\\logs\\app.log'), true, 'should validate Windows path with spaces and parentheses')
+
+  // Invalid characters in Windows paths should fail
+  assert.throws(() => validateFileName('C:\\Users\\test<file.log'), 'should throw for Windows path with < character')
+  assert.throws(() => validateFileName('C:\\Users\\test>file.log'), 'should throw for Windows path with > character')
+  assert.throws(() => validateFileName('C:\\Users\\test|file.log'), 'should throw for Windows path with | character')
+  assert.throws(() => validateFileName('C:\\Users\\test?file.log'), 'should throw for Windows path with ? character')
+  assert.throws(() => validateFileName('C:\\Users\\test*file.log'), 'should throw for Windows path with * character')
+  assert.throws(() => validateFileName('C:\\Users\\test"file.log'), 'should throw for Windows path with " character')
+
+  // Invalid colon usage should fail (colons outside of drive letters)
+  assert.throws(() => validateFileName('C:\\Users\\test:invalid.log'), 'should throw for colon in non-drive position')
+  assert.throws(() => validateFileName('/tmp/test:file.log'), 'should throw for colon in Unix path')
+
+  // Edge cases
+  assert.strictEqual(validateFileName('C:'), true, 'should validate bare drive letter')
+  assert.strictEqual(validateFileName('C:\\'), true, 'should validate root directory')
 })
