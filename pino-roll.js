@@ -126,6 +126,10 @@ module.exports = async function ({
   }
 
   function roll () {
+    // Don't roll if the stream is destroyed
+    if (destination.destroyed) {
+      return
+    }
     destination.reopen(fileName)
     if (symlink) {
       createSymlink(fileName)
@@ -147,6 +151,11 @@ module.exports = async function ({
       scheduleRoll()
     }, frequencySpec.next - Date.now()).unref()
   }
+
+  // Clean up the timeout when the stream is closed or destroyed
+  destination.once('close', () => {
+    clearTimeout(rollTimeout)
+  })
 
   return destination
 }
