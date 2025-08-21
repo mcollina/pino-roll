@@ -51,42 +51,42 @@ it('rotate file based on custom time and date format', async () => {
   console.log(`[DEBUG] Filename pattern: ${fileName}, date: ${currentDate.toISOString()}`)
 
   const stream = await buildStream({ frequency: 100, file, dateFormat: 'yyyy-MM-dd-hh' })
-  console.log(`[DEBUG] Stream created with frequency: 100ms`)
+  console.log('[DEBUG] Stream created with frequency: 100ms')
 
-  console.log(`[DEBUG] Writing messages #1 and #2`)
+  console.log('[DEBUG] Writing messages #1 and #2')
   stream.write('logged message #1\n')
   stream.write('logged message #2\n')
-  
-  console.log(`[DEBUG] Sleeping 110ms for rotation`)
+
+  console.log('[DEBUG] Sleeping 110ms for rotation')
   await sleep(110)
-  
-  console.log(`[DEBUG] Writing messages #3 and #4`)
+
+  console.log('[DEBUG] Writing messages #3 and #4')
   stream.write('logged message #3\n')
   stream.write('logged message #4\n')
-  
-  console.log(`[DEBUG] Sleeping 110ms for second rotation`)
+
+  console.log('[DEBUG] Sleeping 110ms for second rotation')
   await sleep(110)
-  
-  console.log(`[DEBUG] Ending stream`)
+
+  console.log('[DEBUG] Ending stream')
   stream.end()
   await once(stream, 'close')
-  console.log(`[DEBUG] Stream closed`)
+  console.log('[DEBUG] Stream closed')
 
   // Wait for files to be created and rotation to complete
   console.log(`[DEBUG] Waiting for file: ${fileName}.1.log`)
   await waitForFile(`${fileName}.1.log`)
   console.log(`[DEBUG] File found: ${fileName}.1.log`)
-  
+
   console.log(`[DEBUG] Waiting for file: ${fileName}.2.log`)
   await waitForFile(`${fileName}.2.log`)
   console.log(`[DEBUG] File found: ${fileName}.2.log`)
-  
+
   console.log(`[DEBUG] Waiting for file: ${fileName}.3.log`)
   await waitForFile(`${fileName}.3.log`)
   console.log(`[DEBUG] File found: ${fileName}.3.log`)
 
   // Now check contents with additional timing buffer for file system consistency
-  console.log(`[DEBUG] Sleeping 50ms for file system flush`)
+  console.log('[DEBUG] Sleeping 50ms for file system flush')
   await sleep(50) // Small buffer for file system flush on slower platforms
 
   console.log(`[DEBUG] Reading ${fileName}.1.log`)
@@ -105,7 +105,7 @@ it('rotate file based on custom time and date format', async () => {
 
   console.log(`[DEBUG] Checking that ${fileName}.4.log does not exist`)
   await assert.rejects(stat(`${fileName}.4.log`), 'no other files created')
-  console.log(`[DEBUG] Test completed successfully`)
+  console.log('[DEBUG] Test completed successfully')
 })
 
 it('rotate file based on size and date format', async () => {
