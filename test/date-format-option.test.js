@@ -51,7 +51,7 @@ it('rotate file based on custom time and date format', async () => {
   // Write first batch of messages
   stream.write('logged message #1\n')
   stream.write('logged message #2\n')
-  
+
   // Add platform-specific delay for file system sync
   if (process.env.CI && (process.platform === 'darwin' || process.platform === 'win32')) {
     await sleep(5000) // 5 seconds in CI for virtual filesystem sync
@@ -103,7 +103,7 @@ it('rotate file based on custom time and date format', async () => {
 
   // Wait for stream to close properly
   await once(stream, 'close')
-  
+
   // Additional delay for file system sync on virtual filesystems
   if (process.env.CI && (process.platform === 'darwin' || process.platform === 'win32')) {
     await sleep(5000) // 5 seconds in CI for final sync
