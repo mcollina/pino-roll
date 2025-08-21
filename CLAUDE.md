@@ -9,15 +9,15 @@ pino-roll is a Pino transport that automatically rolls log files based on size, 
 ## Development Commands
 
 ### Testing
-- `npm test` - Run tests with standard linting and node:test
+- `npm test` - Run tests with ESLint (neostandard) linting and node:test (sequential execution)
 - `npm run dev` - Run tests in watch mode
-- `npm run test-ci` - Run tests with coverage for CI
+- `npm run test-ci` - Run tests with coverage for CI (sequential execution)
 - Run single test: `node --test test/[filename].test.js`
 
 ### Linting
-- `npm test` includes linting via standard
-- Linting only: `npx standard`
-- Auto-fix linting: `npx standard --fix`
+- `npm test` includes linting via ESLint with neostandard config
+- Linting only: `npx eslint`
+- Auto-fix linting: `npx eslint --fix`
 
 ## Architecture
 
@@ -46,13 +46,15 @@ pino-roll is a Pino transport that automatically rolls log files based on size, 
 
 ### Testing Approach
 
-- Uses built-in node:test framework with coverage
+- Uses built-in node:test framework with coverage (sequential execution via --test-concurrency=1)
 - Mock date utilities for time-based testing (mockdate)
 - Test files mirror source structure in `test/` directory
 - Integration tests with actual Pino instances
 - Leak detection tests for memory management
 - Tests use describe/it blocks for organization
 - Built-in assert library for assertions
+- Platform-specific test handling for macOS/Windows filesystem timing differences
+- Symlink tests are skipped on Windows due to permission requirements
 
 ## Important Considerations
 
