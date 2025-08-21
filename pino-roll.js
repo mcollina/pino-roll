@@ -130,13 +130,22 @@ module.exports = async function ({
     if (destination.destroyed) {
       return
     }
-    destination.reopen(fileName)
-    if (symlink) {
-      createSymlink(fileName)
-    }
-    if (limit) {
-      removeOldFiles({ ...limit, baseFile: file, dateFormat, extension, createdFileNames, newFileName: fileName })
-    }
+
+    // Flush buffered data to disk before rotating the file
+    destination.flush((err) => {
+      if (err) {
+        destination.emit('error', err)
+        return
+      }
+
+      destination.reopen(fileName)
+      if (symlink) {
+        createSymlink(fileName)
+      }
+      if (limit) {
+        removeOldFiles({ ...limit, baseFile: file, dateFormat, extension, createdFileNames, newFileName: fileName })
+      }
+    })
   }
 
   function scheduleRoll () {
