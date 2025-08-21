@@ -248,7 +248,7 @@ describe('detectLastNumber()', () => {
 
     // Add extra delay for Windows filesystem timing
     if (process.env.CI && process.platform === 'win32') {
-      await sleep(5000) // 5 seconds in CI for Windows filesystem
+      await sleep(1000) // 1 second in CI for Windows filesystem
     } else if (process.platform === 'win32') {
       await sleep(200)
     }

@@ -54,7 +54,7 @@ it('rotate file based on custom time and date format', async () => {
 
   // Add platform-specific delay for file system sync
   if (process.env.CI && (process.platform === 'darwin' || process.platform === 'win32')) {
-    await sleep(5000) // 5 seconds in CI for virtual filesystem sync
+    await sleep(1000) // 1 second in CI for virtual filesystem sync
   } else if (process.platform === 'darwin' || process.platform === 'win32') {
     await sleep(200)
   }
@@ -92,9 +92,9 @@ it('rotate file based on custom time and date format', async () => {
 
   stream.write('logged message #4\n')
 
-  // Give time for final writes - much more in CI for macOS/Windows
+  // Give time for final writes - more in CI for macOS/Windows
   if (process.env.CI && (process.platform === 'darwin' || process.platform === 'win32')) {
-    await sleep(5000) // 5 seconds in CI
+    await sleep(1000) // 1 second in CI
   } else {
     await sleep(process.platform === 'darwin' || process.platform === 'win32' ? 300 : 50)
   }
@@ -106,7 +106,7 @@ it('rotate file based on custom time and date format', async () => {
 
   // Additional delay for file system sync on virtual filesystems
   if (process.env.CI && (process.platform === 'darwin' || process.platform === 'win32')) {
-    await sleep(5000) // 5 seconds in CI for final sync
+    await sleep(1000) // 1 second in CI for final sync
   } else if (process.platform === 'darwin' || process.platform === 'win32') {
     await sleep(300)
   }
@@ -194,7 +194,7 @@ it('rotate file based on size and date format with custom frequency', async () =
 
   // Add delay for virtual filesystem on macOS/Windows
   if (process.env.CI && (process.platform === 'darwin' || process.platform === 'win32')) {
-    await sleep(5000) // 5 seconds in CI for virtual filesystem
+    await sleep(1000) // 1 second in CI for virtual filesystem
   } else if (process.platform === 'darwin' || process.platform === 'win32') {
     await sleep(100)
   }
