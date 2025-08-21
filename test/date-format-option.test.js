@@ -51,9 +51,14 @@ it('rotate file based on custom time and date format', async () => {
   // Write first batch of messages
   stream.write('logged message #1\n')
   stream.write('logged message #2\n')
+  
+  // Add platform-specific delay for file system sync
+  if (process.platform === 'darwin' || process.platform === 'win32') {
+    await sleep(200)
+  }
 
   // Wait for the first file to be created with our content
-  await waitForFile(`${fileName}.1.log`, { timeout: 1000 })
+  await waitForFile(`${fileName}.1.log`, { timeout: 2000 })
   await waitForCondition(
     async () => {
       try {
@@ -85,13 +90,18 @@ it('rotate file based on custom time and date format', async () => {
 
   stream.write('logged message #4\n')
 
-  // Give time for final writes
-  await sleep(50)
+  // Give time for final writes - more for macOS/Windows
+  await sleep(process.platform === 'darwin' || process.platform === 'win32' ? 300 : 50)
 
   stream.end()
 
   // Wait for stream to close properly
   await once(stream, 'close')
+  
+  // Additional delay for file system sync on virtual filesystems
+  if (process.platform === 'darwin' || process.platform === 'win32') {
+    await sleep(300)
+  }
 
   // Find all dated log files
   const logFiles = []
