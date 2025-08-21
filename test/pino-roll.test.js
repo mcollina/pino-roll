@@ -274,18 +274,22 @@ it('remove pre-existing log files when removing files based on count when limit.
   const dateFormat = 'HH-mm-ss'
   const notLogFileName = join(logFolder, 'notLogFile')
   const baseFile = join(logFolder, 'log')
+  console.log(`[DEBUG-LIMIT] Test starting, platform: ${process.platform}, CI: ${process.env.CI}, folder: ${logFolder}`)
 
   // Create a non-log file and some pre-existing log files
   await writeFile(notLogFileName, 'not a log file')
+  console.log(`[DEBUG-LIMIT] Created non-log file: ${notLogFileName}`)
 
   // Create some old log files with timestamps
   const oldTime1 = new Date(Date.now() - 10000) // 10 seconds ago
   const oldTime2 = new Date(Date.now() - 5000) // 5 seconds ago
   const oldFile1 = `${baseFile}.${format(oldTime1, dateFormat)}.1.log`
   const oldFile2 = `${baseFile}.${format(oldTime2, dateFormat)}.1.log`
+  console.log(`[DEBUG-LIMIT] Creating old files: ${oldFile1}, ${oldFile2}`)
 
   await writeFile(oldFile1, 'oldest content')
   await writeFile(oldFile2, 'old content')
+  console.log(`[DEBUG-LIMIT] Old files created`)
 
   // Start the stream with a limit of 2 files
   const stream = await buildStream({
@@ -296,61 +300,80 @@ it('remove pre-existing log files when removing files based on count when limit.
   })
 
   // Write messages to trigger rotations
+  console.log(`[DEBUG-LIMIT] Writing message #1`)
   stream.write('logged message #1\n')
 
   // Wait for the first rotation
+  console.log(`[DEBUG-LIMIT] Waiting for first log file`)
   await waitForCondition(async () => {
     const files = await readdir(logFolder)
     const logFiles = files.filter(f => f.startsWith('log.') && f.endsWith('.log'))
+    console.log(`[DEBUG-LIMIT] Check 1: found ${logFiles.length} files: ${logFiles.join(', ')}`)
     return logFiles.length >= 1
   }, { timeout: 5000, description: 'first log file to be created' })
 
   // Write second message and wait for rotation
+  console.log(`[DEBUG-LIMIT] Sleeping 1100ms for rotation`)
   await sleep(1100)
+  console.log(`[DEBUG-LIMIT] Writing message #2`)
   stream.write('logged message #2\n')
 
   // Wait for second rotation
+  console.log(`[DEBUG-LIMIT] Waiting for second log file`)
   await waitForCondition(async () => {
     const files = await readdir(logFolder)
     const logFiles = files.filter(f => f.startsWith('log.') && f.endsWith('.log'))
+    console.log(`[DEBUG-LIMIT] Check 2: found ${logFiles.length} files: ${logFiles.join(', ')}`)
     return logFiles.length >= 2
   }, { timeout: 5000, description: 'second log file to be created' })
 
   // Write third message and wait for rotation
+  console.log(`[DEBUG-LIMIT] Sleeping 1100ms for second rotation`)
   await sleep(1100)
+  console.log(`[DEBUG-LIMIT] Writing message #3`)
   stream.write('logged message #3\n')
 
   // Give some time for the third message to be processed and limit enforcement to happen
+  console.log(`[DEBUG-LIMIT] Sleeping 200ms for processing`)
   await sleep(200)
 
   // Wait for the limit to be enforced (should keep only 2 files)
   // Use longer timeout for Windows/macOS file system operations
+  console.log(`[DEBUG-LIMIT] Waiting for limit enforcement (max 2 files)`)
   await waitForCondition(async () => {
     const files = await readdir(logFolder)
     const logFiles = files.filter(f => f.startsWith('log.') && f.endsWith('.log'))
+    console.log(`[DEBUG-LIMIT] Check limit: found ${logFiles.length} files: ${logFiles.join(', ')}`)
     // Should have exactly 2 files due to limit
     return logFiles.length === 2
   }, { timeout: 30000, interval: 100, description: 'file limit to be enforced' })
 
+  console.log(`[DEBUG-LIMIT] Ending stream`)
   stream.end()
   await once(stream, 'close')
+  console.log(`[DEBUG-LIMIT] Stream closed`)
 
   // Add delay for virtual filesystem on Windows/macOS
   if (process.env.CI && (process.platform === 'win32' || process.platform === 'darwin')) {
+    console.log(`[DEBUG-LIMIT] CI detected, sleeping 1000ms for filesystem sync`)
     await sleep(1000) // 1 second in CI for virtual filesystem sync
   } else if (process.platform === 'win32' || process.platform === 'darwin') {
+    console.log(`[DEBUG-LIMIT] Platform delay: sleeping 500ms`)
     await sleep(500)
   }
 
   // Verify the non-log file is untouched
+  console.log(`[DEBUG-LIMIT] Checking non-log file: ${notLogFileName}`)
   const nonLogContent = await readFile(notLogFileName, 'utf8')
   assert.ok(nonLogContent.includes('not a log file'), 'non-log file is untouched')
 
   // Verify old files were deleted (they should be since limit is 2 and we created newer files)
+  console.log(`[DEBUG-LIMIT] Checking old files were deleted`)
   await assert.rejects(stat(oldFile1), 'oldest pre-existing file was deleted')
   await assert.rejects(stat(oldFile2), 'old pre-existing file was deleted')
 
   // Get the actual log files that exist
+  console.log(`[DEBUG-LIMIT] Getting final file list`)
   const finalFiles = await readdir(logFolder)
   const finalLogFiles = finalFiles
     .filter(f => f.startsWith('log.') && f.endsWith('.log'))
@@ -359,12 +382,18 @@ it('remove pre-existing log files when removing files based on count when limit.
   assert.strictEqual(finalLogFiles.length, 2, 'exactly 2 log files remain')
 
   // Read the files and verify they contain the expected messages
+  console.log(`[DEBUG-LIMIT] Reading contents of remaining files`)
   const contents = await Promise.all(
-    finalLogFiles.map(f => readFile(join(logFolder, f), 'utf8'))
+    finalLogFiles.map(async f => {
+      const content = await readFile(join(logFolder, f), 'utf8')
+      console.log(`[DEBUG-LIMIT] File ${f} content (${content.length} bytes): "${content.replace(/\n/g, '\\n')}"`)
+      return content
+    })
   )
 
   // The files should contain the most recent messages (exact messages depend on timing)
   const allContent = contents.join('\n')
+  console.log(`[DEBUG-LIMIT] Combined content: "${allContent.replace(/\n/g, '\\n')}"`)
 
   // At least one message should be present
   const hasMessage1 = allContent.includes('#1')
@@ -374,14 +403,18 @@ it('remove pre-existing log files when removing files based on count when limit.
   // On Windows, timing issues can cause messages to be in different files than expected
   // Relax the assertion to be more flexible about message distribution
   if (process.platform === 'win32') {
+    console.log(`[DEBUG-LIMIT-WIN] Platform check: Windows detected`)
+    console.log(`[DEBUG-LIMIT-WIN] Files found: ${finalLogFiles.length} - ${finalLogFiles.join(', ')}`)
+    console.log(`[DEBUG-LIMIT-WIN] All content length: ${allContent.length}`)
+    console.log(`[DEBUG-LIMIT-WIN] All content: "${allContent.replace(/\n/g, '\\n')}"`)
+    
     // On Windows, just check that files exist - content might be delayed
     assert.ok(finalLogFiles.length === 2, `should have exactly 2 files, got ${finalLogFiles.length}`)
     // Log diagnostic information
     if (allContent.length === 0) {
-      console.log('Windows: Files exist but content may be delayed in CI')
+      console.log('[DEBUG-LIMIT-WIN] WARNING: Files exist but content is empty - may be delayed in CI')
     } else {
-      console.log(`Windows: Found content in files: "${allContent}"`)
-      console.log(`Windows: Messages found - #1:${hasMessage1}, #2:${hasMessage2}, #3:${hasMessage3}`)
+      console.log(`[DEBUG-LIMIT-WIN] Messages found - #1:${hasMessage1}, #2:${hasMessage2}, #3:${hasMessage3}`)
     }
   } else {
     assert.ok(hasMessage1 || hasMessage2 || hasMessage3, 'at least one message is present in remaining files')
