@@ -441,7 +441,7 @@ it('throw when limit.count is 0', async () => {
   )
 })
 
-it('creates symlink if prop is set', async () => {
+it('creates symlink if prop is set', { skip: process.platform === 'win32' }, async () => {
   const file = join(logFolder, 'log')
   const linkPath = join(logFolder, 'current.log')
   const stream = await buildStream({ file, symlink: true })
@@ -455,7 +455,7 @@ it('creates symlink if prop is set', async () => {
   assert.strictEqual(content, 'test content\n', 'symlink contains correct content')
 })
 
-it('symlink rotates on roll', async () => {
+it('symlink rotates on roll', { skip: process.platform === 'win32' }, async () => {
   const file = join(logFolder, 'log')
   const linkPath = join(logFolder, 'current.log')
   const frequency = 100

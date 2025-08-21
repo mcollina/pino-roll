@@ -297,7 +297,7 @@ it('validateLimitOptions()', async () => {
   assert.throws(() => validateLimitOptions({ count: 2, removeOtherLogFiles: 'ok' }), { message: 'limit.removeOtherLogFiles must be boolean' }, 'throws when limit.removeOtherLogFiles is not boolean')
 })
 
-describe('checkSymlink()', () => {
+describe('checkSymlink()', { skip: process.platform === 'win32' }, () => {
   let folder, other
   beforeEach(async () => {
     folder = createTempTestDir()
@@ -342,7 +342,7 @@ describe('checkSymlink()', () => {
   })
 })
 
-describe('createSymlink()', () => {
+describe('createSymlink()', { skip: process.platform === 'win32' }, () => {
   let folder
   beforeEach(() => {
     folder = createTempTestDir()
