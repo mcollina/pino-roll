@@ -266,7 +266,7 @@ describe('detectLastNumber()', () => {
     }
   })
 
-  it('given existing files with a time with extension', async () => {
+  it('given existing files with a time with extension', { skip: process.platform !== 'linux' }, async () => {
     const fileName = join(folder, 'file.5.log')
     await writeFile(join(folder, 'file.9.log'), '')
     await writeFile(join(folder, 'file.10.log'), '')
