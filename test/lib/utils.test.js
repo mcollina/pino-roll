@@ -279,8 +279,10 @@ describe('detectLastNumber()', () => {
     assert.strictEqual(await detectLastNumber(fileName, birthtimeMs - 150, '.log'), 10, 'normalizes extension with dot prefix')
     assert.strictEqual(await detectLastNumber(fileName, birthtimeMs, 'log'), 3, 'ignores files older than time')
     assert.strictEqual(await detectLastNumber(fileName, birthtimeMs, '.log'), 3, 'normalizes extension with dot prefix')
-    assert.strictEqual(await detectLastNumber(fileName, Date.now(), 'log'), 1, 'ignores all files older than time')
-    assert.strictEqual(await detectLastNumber(fileName, Date.now(), '.log'), 1, 'ignores all files older than time')
+    // On Windows, filesystem timing can be less precise with Date.now(), so use a future time
+    const futureTime = Date.now() + (process.platform === 'win32' ? 1000 : 0)
+    assert.strictEqual(await detectLastNumber(fileName, futureTime, 'log'), 1, 'ignores all files older than time')
+    assert.strictEqual(await detectLastNumber(fileName, futureTime, '.log'), 1, 'ignores all files older than time')
   })
 
   it('given files without numbers', async () => {

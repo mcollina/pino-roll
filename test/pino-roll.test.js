@@ -334,19 +334,22 @@ it('remove pre-existing log files when removing files based on count when limit.
   stream.write('logged message #3\n')
 
   // Give some time for the third message to be processed and limit enforcement to happen
-  console.log('[DEBUG-LIMIT] Sleeping 200ms for processing')
-  await sleep(200)
+  // Windows filesystem operations can be significantly slower
+  const processingDelay = process.platform === 'win32' ? 2000 : 200
+  console.log(`[DEBUG-LIMIT] Sleeping ${processingDelay}ms for processing`)
+  await sleep(processingDelay)
 
   // Wait for the limit to be enforced (should keep only 2 files)
   // Use longer timeout for Windows/macOS file system operations
   console.log('[DEBUG-LIMIT] Waiting for limit enforcement (max 2 files)')
+  const limitTimeout = process.platform === 'win32' ? 60000 : 30000
   await waitForCondition(async () => {
     const files = await readdir(logFolder)
     const logFiles = files.filter(f => f.startsWith('log.') && f.endsWith('.log'))
     console.log(`[DEBUG-LIMIT] Check limit: found ${logFiles.length} files: ${logFiles.join(', ')}`)
     // Should have exactly 2 files due to limit
     return logFiles.length === 2
-  }, { timeout: 30000, interval: 100, description: 'file limit to be enforced' })
+  }, { timeout: limitTimeout, interval: 100, description: 'file limit to be enforced' })
 
   console.log('[DEBUG-LIMIT] Ending stream')
   stream.end()
