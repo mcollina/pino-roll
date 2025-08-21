@@ -34,7 +34,9 @@ it('rotate file based on time', async () => {
   stream.write('logged message #2\n')
 
   // Wait for the first file to be created and contain our messages
-  await waitForRotationComplete(file, 1, 'logged message #1', { timeout: 1000 })
+  // Increase timeout for Windows Node 20 which is particularly slow
+  const timeout = (process.platform === 'win32' && process.version.startsWith('v20.')) ? 3000 : 1000
+  await waitForRotationComplete(file, 1, 'logged message #1', { timeout })
 
   // Wait for rotation to occur - we'll know it happened when we can write to a new file
   await waitForCondition(
@@ -57,13 +59,19 @@ it('rotate file based on time', async () => {
   // Write more messages to the current file
   stream.write('logged message #4\n')
 
-  // Give some time for final writes
-  await sleep(50)
+  // Give some time for final writes - more time on Windows
+  const writeDelay = (process.platform === 'win32') ? 200 : 50
+  await sleep(writeDelay)
 
   stream.end()
 
   // Wait for stream to close properly
   await once(stream, 'close')
+
+  // Additional delay for Windows filesystem to flush
+  if (process.platform === 'win32') {
+    await sleep(100)
+  }
 
   // Find all log files and verify they contain the expected messages
   const logFiles = []
