@@ -247,7 +247,9 @@ describe('detectLastNumber()', () => {
     await writeFile(join(folder, 'file.3'), '', { flush: true })
 
     // Add extra delay for Windows filesystem timing
-    if (process.platform === 'win32') {
+    if (process.env.CI && process.platform === 'win32') {
+      await sleep(5000) // 5 seconds in CI for Windows filesystem
+    } else if (process.platform === 'win32') {
       await sleep(200)
     }
 
