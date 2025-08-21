@@ -335,7 +335,9 @@ it('remove pre-existing log files when removing files based on count when limit.
   await once(stream, 'close')
 
   // Add delay for virtual filesystem on Windows/macOS
-  if (process.platform === 'win32' || process.platform === 'darwin') {
+  if (process.env.CI && (process.platform === 'win32' || process.platform === 'darwin')) {
+    await sleep(5000) // 5 seconds in CI for virtual filesystem sync
+  } else if (process.platform === 'win32' || process.platform === 'darwin') {
     await sleep(500)
   }
 
