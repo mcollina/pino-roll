@@ -107,7 +107,7 @@ it('rotate file based on custom time and date format', async () => {
   assert.ok(content.includes('#4'), 'second file contains fourth log')
   assert.ok(!content.includes('#2'), 'second file does not contains second log')
 
-  console.log(`[DEBUG] Checking that no more than 4 files exist`)
+  console.log('[DEBUG] Checking that no more than 4 files exist')
   // With universal flush delays, sometimes a 4th file gets created, which is acceptable
   await assert.rejects(stat(`${fileName}.5.log`), 'no more than 4 files created')
   console.log('[DEBUG] Test completed successfully')
