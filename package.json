@@ -7,7 +7,8 @@
     "dev": "node --test --watch",
     "lint": "eslint",
     "test": "eslint && node --test --test-concurrency=1",
-    "test-ci": "eslint && c8 --reporter=lcovonly node --test --test-concurrency=1"
+    "test-only": "node --test --test-concurrency=1",
+    "test-ci": "c8 --reporter=lcovonly node --test --test-concurrency=1"
   },
   "repository": {
     "type": "git",
