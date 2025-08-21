@@ -159,7 +159,6 @@ it('rotate file based on size and date format with custom frequency', { skip: pr
   stats = await stat(`${fileWithDate}.2.log`)
   assert.ok(stats.size <= size, `second file size: ${stats.size} <= ${size}`)
   stats = await stat(`${fileWithDate}.3.log`)
-  
   // Check that message #4 appears in one of the log files (timing may vary)
   let found4 = false
   for (let i = 1; i <= 3; i++) {
