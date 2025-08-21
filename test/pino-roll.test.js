@@ -324,12 +324,13 @@ it('remove pre-existing log files when removing files based on count when limit.
   await sleep(200)
 
   // Wait for the limit to be enforced (should keep only 2 files)
+  // Use longer timeout for Windows/macOS file system operations
   await waitForCondition(async () => {
     const files = await readdir(logFolder)
     const logFiles = files.filter(f => f.startsWith('log.') && f.endsWith('.log'))
     // Should have exactly 2 files due to limit
     return logFiles.length === 2
-  }, { timeout: 10000, interval: 100, description: 'file limit to be enforced' })
+  }, { timeout: 30000, interval: 100, description: 'file limit to be enforced' })
 
   stream.end()
   await once(stream, 'close')

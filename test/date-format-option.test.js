@@ -11,8 +11,7 @@ const {
   buildStream,
   createTempTestDir,
   sleep,
-  waitForFile,
-  waitForCondition
+  waitForFile
 } = require('./utils')
 
 let logFolder
@@ -38,124 +37,49 @@ it('rotate file with date format based on frequency', async () => {
 
 it('rotate file based on custom time and date format', async () => {
   const file = join(logFolder, 'log')
-  const frequency = 100
 
-  // Calculate the date format using the same logic as pino-roll
-  const { parseFrequency, parseDate } = require('../lib/utils')
-  const frequencySpec = parseFrequency(frequency)
-  const dateStr = parseDate('yyyy-MM-dd-HH', frequencySpec, true)
-  const fileName = `${file}.${dateStr}`
+  // Synchronize to rotation boundary like the original tap version
+  await sleep(100 - Date.now() % 100)
 
-  const stream = await buildStream({ frequency, file, dateFormat: 'yyyy-MM-dd-HH' })
+  // Calculate filename AFTER synchronization, using the same format as the original test
+  const fileName = `${file}.${format(new Date(), 'yyyy-MM-dd-hh')}`
 
-  // Write first batch of messages
+  const stream = await buildStream({ frequency: 100, file, dateFormat: 'yyyy-MM-dd-hh' })
+
   stream.write('logged message #1\n')
   stream.write('logged message #2\n')
-
-  // Add platform-specific delay for file system sync
-  if (process.env.CI && (process.platform === 'darwin' || process.platform === 'win32')) {
-    await sleep(1000) // 1 second in CI for virtual filesystem sync
-  } else if (process.platform === 'darwin' || process.platform === 'win32') {
-    await sleep(200)
-  }
-
-  // Wait for the first file to be created with our content
-  await waitForFile(`${fileName}.1.log`, { timeout: 2000 })
-  await waitForCondition(
-    async () => {
-      try {
-        const content = await readFile(`${fileName}.1.log`, 'utf8')
-        return content.includes('logged message #1')
-      } catch (error) {
-        return false
-      }
-    },
-    { timeout: 1000, description: 'first file to contain initial messages' }
-  )
-
-  // Wait for rotation and write new messages
-  await sleep(frequency + 10)
+  await sleep(110)
   stream.write('logged message #3\n')
-
-  // Wait for rotation to occur (second file created)
-  await waitForCondition(
-    async () => {
-      try {
-        await stat(`${fileName}.2.log`)
-        return true
-      } catch (error) {
-        return false
-      }
-    },
-    { timeout: 3000, interval: 50, description: 'second log file to be created' }
-  )
-
   stream.write('logged message #4\n')
-
-  // Give time for final writes - more in CI for macOS/Windows
-  if (process.env.CI && (process.platform === 'darwin' || process.platform === 'win32')) {
-    await sleep(1000) // 1 second in CI
-  } else {
-    await sleep(process.platform === 'darwin' || process.platform === 'win32' ? 300 : 50)
-  }
-
+  await sleep(110)
   stream.end()
-
-  // Wait for stream to close properly
   await once(stream, 'close')
 
-  // Additional delay for file system sync on virtual filesystems
-  if (process.env.CI && (process.platform === 'darwin' || process.platform === 'win32')) {
-    await sleep(1000) // 1 second in CI for final sync
-  } else if (process.platform === 'darwin' || process.platform === 'win32') {
-    await sleep(300)
-  }
+  // Wait for files to be created and rotation to complete
+  await waitForFile(`${fileName}.1.log`)
+  await waitForFile(`${fileName}.2.log`)
+  await waitForFile(`${fileName}.3.log`)
 
-  // Find all dated log files
-  const logFiles = []
-  for (let i = 1; i <= 10; i++) {
-    try {
-      await stat(`${fileName}.${i}.log`)
-      logFiles.push(i)
-    } catch (error) {
-      break
-    }
-  }
+  // Now check contents with additional timing buffer for file system consistency
+  await sleep(50) // Small buffer for file system flush on slower platforms
 
-  assert.ok(logFiles.length >= 2, `Should have at least 2 log files, got ${logFiles.length}`)
+  let content = await readFile(`${fileName}.1.log`, 'utf8')
+  assert.ok(content.includes('#1'), 'first file contains first log')
+  assert.ok(content.includes('#2'), 'first file contains second log')
+  assert.ok(!content.includes('#3'), 'first file does not contains third log')
 
-  // Verify that messages are properly separated
-  let found1and2 = false
-  let found3or4 = false
-  let file1and2Number = null
+  content = await readFile(`${fileName}.2.log`, 'utf8')
+  assert.ok(content.includes('#3'), 'second file contains third log')
+  assert.ok(content.includes('#4'), 'second file contains fourth log')
+  assert.ok(!content.includes('#2'), 'second file does not contains second log')
 
-  for (const fileNum of logFiles) {
-    const content = await readFile(`${fileName}.${fileNum}.log`, 'utf8')
-    if (content.includes('#1') && content.includes('#2')) {
-      found1and2 = true
-      file1and2Number = fileNum
-    }
-    if (content.includes('#3') || content.includes('#4')) {
-      found3or4 = true
-      // Messages 3 and 4 should be in a different file than 1 and 2
-      if (file1and2Number !== null) {
-        assert.notStrictEqual(fileNum, file1and2Number,
-          'Messages #3/#4 should be in a different file than #1/#2')
-      }
-    }
-  }
-
-  assert.ok(found1and2, 'Should find a file with messages #1 and #2')
-  assert.ok(found3or4, 'Should find file(s) with messages #3 or #4')
+  await assert.rejects(stat(`${fileName}.4.log`), 'no other files created')
 })
 
 it('rotate file based on size and date format', async () => {
   const file = join(logFolder, 'log')
-  // Calculate the date format using the same logic as pino-roll
-  const { parseFrequency, parseDate } = require('../lib/utils')
-  const frequencySpec = parseFrequency('hourly')
-  const dateStr = parseDate('yyyy-MM-dd-hh', frequencySpec, true)
-  const fileWithDate = `${file}.${dateStr}`
+  const { startOfHour } = require('date-fns')
+  const fileWithDate = `${file}.${format(startOfHour(new Date()), 'yyyy-MM-dd-hh')}`
   const size = 20
   const stream = await buildStream({ frequency: 'hourly', size: `${size}b`, file, dateFormat: 'yyyy-MM-dd-hh' })
   stream.write('logged message #1\n')
@@ -176,11 +100,8 @@ it('rotate file based on size and date format', async () => {
 
 it('rotate file based on size and date format with custom frequency', async () => {
   const file = join(logFolder, 'log')
-  // Calculate the date format using the same logic as pino-roll
-  const { parseFrequency, parseDate } = require('../lib/utils')
-  const frequencySpec = parseFrequency(1000)
-  const dateStr = parseDate('yyyy-MM-dd-hh', frequencySpec, true)
-  const fileWithDate = `${file}.${dateStr}`
+  const { startOfHour } = require('date-fns')
+  const fileWithDate = `${file}.${format(startOfHour(new Date()).getTime(), 'yyyy-MM-dd-hh')}`
   const size = 20
   const stream = await buildStream({ frequency: 1000, size: `${size}b`, file, dateFormat: 'yyyy-MM-dd-hh' })
   stream.write('logged message #1\n')
@@ -192,21 +113,10 @@ it('rotate file based on size and date format with custom frequency', async () =
   stream.end()
   await once(stream, 'close')
 
-  // Add delay for virtual filesystem on macOS/Windows
-  if (process.env.CI && (process.platform === 'darwin' || process.platform === 'win32')) {
-    await sleep(1000) // 1 second in CI for virtual filesystem
-  } else if (process.platform === 'darwin' || process.platform === 'win32') {
-    await sleep(100)
-  }
-
   let stats = await stat(`${fileWithDate}.1.log`)
-  // Relax assertion for macOS where file sizes can be slightly smaller due to line ending differences
-  const sizeCheck = process.platform === 'darwin'
-    ? stats.size >= (size - 5) && stats.size <= size * 2 // Allow 5 bytes smaller on macOS
-    : size <= stats.size && stats.size <= size * 2
   assert.ok(
-    sizeCheck,
-    `first file size: ${size} <= ${stats.size} <= ${size * 2} (platform: ${process.platform})`
+    size <= stats.size && stats.size <= size * 2,
+    `first file size: ${size} <= ${stats.size} <= ${size * 2}`
   )
   stats = await stat(`${fileWithDate}.2.log`)
   assert.ok(stats.size <= size, `second file size: ${stats.size} <= ${size}`)
