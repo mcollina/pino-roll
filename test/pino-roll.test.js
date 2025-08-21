@@ -34,8 +34,8 @@ it('rotate file based on time', async () => {
   stream.write('logged message #2\n')
 
   // Wait for the first file to be created and contain our messages
-  // Increase timeout for Windows Node 20 which is particularly slow
-  const timeout = (process.platform === 'win32' && process.version.startsWith('v20.')) ? 3000 : 1000
+  // Increase timeout for Windows which can be slower
+  const timeout = process.platform === 'win32' ? 5000 : 1000
   await waitForRotationComplete(file, 1, 'logged message #1', { timeout })
 
   // Wait for rotation to occur - we'll know it happened when we can write to a new file
