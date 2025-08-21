@@ -142,6 +142,12 @@ it('rotate file based on size and date format with custom frequency', async () =
   stream.write('logged message #3\n')
   await sleep(1010)
   stream.write('logged message #4\n')
+  
+  // Add delay for macOS/Windows filesystem timing
+  if (process.platform === 'darwin' || process.platform === 'win32') {
+    await sleep(100)
+  }
+  
   stream.end()
   await once(stream, 'close')
 
