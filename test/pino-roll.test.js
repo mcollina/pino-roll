@@ -566,6 +566,9 @@ it('symlink rotates on roll', { skip: process.platform === 'win32' }, async () =
   stream.end()
   await once(stream, 'close')
 
+  // Wait for flush and symlink operations to complete
+  await sleep(150)
+
   // Verify symlink still exists and points to a valid file
   await lstat(linkPath)
   const finalTarget = await readlink(linkPath)
