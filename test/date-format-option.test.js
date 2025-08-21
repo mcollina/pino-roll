@@ -72,6 +72,12 @@ it('rotate file based on custom time and date format', async () => {
   await once(stream, 'close')
   console.log('[DEBUG] Stream closed')
 
+  // Additional delay for Ubuntu Node 22 flush timing
+  if (process.platform === 'linux' && process.env.CI) {
+    console.log('[DEBUG] Adding extra delay for Linux CI flush timing')
+    await sleep(100)
+  }
+
   // Wait for files to be created and rotation to complete
   console.log(`[DEBUG] Waiting for file: ${fileName}.1.log`)
   await waitForFile(`${fileName}.1.log`)
@@ -150,6 +156,11 @@ it('rotate file based on size and date format with custom frequency', { skip: pr
 
   stream.end()
   await once(stream, 'close')
+
+  // Additional delay for Linux CI flush timing
+  if (process.platform === 'linux' && process.env.CI) {
+    await sleep(100)
+  }
 
   let stats = await stat(`${fileWithDate}.1.log`)
   assert.ok(
