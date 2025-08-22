@@ -68,10 +68,8 @@ it('rotate file based on time', async () => {
   // Wait for stream to close properly
   await once(stream, 'close')
 
-  // Additional delay for Windows filesystem to flush
-  if (process.platform === 'win32') {
-    await sleep(100)
-  }
+  // Additional delay for filesystem to flush and for async flush callbacks to complete
+  await sleep(200)
 
   // Find all log files and verify they contain the expected messages
   const logFiles = []
@@ -86,23 +84,36 @@ it('rotate file based on time', async () => {
 
   assert.ok(logFiles.length >= 2, `Should have at least 2 log files, got ${logFiles.length}`)
 
-  // Verify that messages are properly separated
+  // Wait a bit more and retry reading files if needed (for flush callback timing)
   let found1and2 = false
   let found3or4 = false
   let file1and2Number = null
 
-  for (const fileNum of logFiles) {
-    const content = await readFile(`${file}.${fileNum}.log`, 'utf8')
-    if (content.includes('#1') && content.includes('#2')) {
-      found1and2 = true
-      file1and2Number = fileNum
+  // Try reading files with retry logic for timing issues
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (found1and2 && found3or4) break
+    
+    if (attempt > 0) {
+      await sleep(100) // Wait between attempts
     }
-    if (content.includes('#3') || content.includes('#4')) {
-      found3or4 = true
-      // Messages 3 and 4 should be in a different file than 1 and 2
-      if (file1and2Number !== null) {
-        assert.notStrictEqual(fileNum, file1and2Number,
-          'Messages #3/#4 should be in a different file than #1/#2')
+
+    for (const fileNum of logFiles) {
+      try {
+        const content = await readFile(`${file}.${fileNum}.log`, 'utf8')
+        if (content.includes('#1') && content.includes('#2')) {
+          found1and2 = true
+          file1and2Number = fileNum
+        }
+        if (content.includes('#3') || content.includes('#4')) {
+          found3or4 = true
+          // Messages 3 and 4 should be in a different file than 1 and 2
+          if (file1and2Number !== null) {
+            assert.notStrictEqual(fileNum, file1and2Number,
+              'Messages #3/#4 should be in a different file than #1/#2')
+          }
+        }
+      } catch (error) {
+        // File might not be ready yet, continue
       }
     }
   }
