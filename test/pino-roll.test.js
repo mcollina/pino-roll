@@ -406,10 +406,18 @@ it('remove pre-existing log files when removing files based on count when limit.
     return logFiles.length === 2
   }, { timeout: limitTimeout, interval: 100, description: 'file limit to be enforced' })
 
+  // Add flush delay before ending to ensure messages are written
+  console.log('[DEBUG-LIMIT] Sleeping 500ms for flush before ending stream')
+  await sleep(500)
+  
   console.log('[DEBUG-LIMIT] Ending stream')
   stream.end()
   await once(stream, 'close')
   console.log('[DEBUG-LIMIT] Stream closed')
+  
+  // Additional delay for flush callbacks to complete
+  console.log('[DEBUG-LIMIT] Sleeping 200ms for post-close flush')
+  await sleep(200)
 
   // Add delay for virtual filesystem on Windows/macOS
   if (process.env.CI && (process.platform === 'win32' || process.platform === 'darwin')) {
