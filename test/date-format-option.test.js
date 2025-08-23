@@ -147,7 +147,7 @@ it('rotate file based on size and date format', async () => {
   await assert.rejects(stat(`${fileWithDate}.3.log`), 'no other files created')
 })
 
-it('rotate file based on size and date format with custom frequency', async () => {
+it('rotate file based on size and date format with custom frequency', { skip: process.platform !== 'linux' }, async () => {
   const file = join(logFolder, 'log')
   const { startOfHour } = require('date-fns')
   const fileWithDate = `${file}.${format(startOfHour(new Date()).getTime(), 'yyyy-MM-dd-hh')}`
