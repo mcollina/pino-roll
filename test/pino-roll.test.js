@@ -92,7 +92,7 @@ it('rotate file based on time', async () => {
   // Try reading files with retry logic for timing issues
   for (let attempt = 0; attempt < 3; attempt++) {
     if (found1and2 && found3or4) break
-    
+
     if (attempt > 0) {
       await sleep(100) // Wait between attempts
     }
