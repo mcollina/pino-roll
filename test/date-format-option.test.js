@@ -147,7 +147,7 @@ it('rotate file based on size and date format', async () => {
   await assert.rejects(stat(`${fileWithDate}.3.log`), 'no other files created')
 })
 
-it('rotate file based on size and date format with custom frequency', { skip: process.platform !== 'linux' }, async () => {
+it('rotate file based on size and date format with custom frequency', async () => {
   const file = join(logFolder, 'log')
   const { startOfHour } = require('date-fns')
   const fileWithDate = `${file}.${format(startOfHour(new Date()).getTime(), 'yyyy-MM-dd-hh')}`
@@ -171,14 +171,35 @@ it('rotate file based on size and date format with custom frequency', { skip: pr
   // Additional delay for flush timing across all platforms
   await sleep(100)
 
-  let stats = await stat(`${fileWithDate}.1.log`)
-  assert.ok(
-    size <= stats.size && stats.size <= size * 2,
-    `first file size: ${size} <= ${stats.size} <= ${size * 2}`
-  )
-  stats = await stat(`${fileWithDate}.2.log`)
-  assert.ok(stats.size <= size, `second file size: ${stats.size} <= ${size}`)
-  stats = await stat(`${fileWithDate}.3.log`)
+  // Retry logic for file stats to handle timing variations
+  let statsFound = false
+  for (let attempt = 0; attempt < 5; attempt++) {
+    if (statsFound) break
+
+    if (attempt > 0) {
+      await sleep(200) // Wait between attempts
+    }
+
+    try {
+      const stats1 = await stat(`${fileWithDate}.1.log`)
+      const stats2 = await stat(`${fileWithDate}.2.log`)
+      await stat(`${fileWithDate}.3.log`) // Verify third file exists
+
+      // Verify file sizes
+      assert.ok(
+        size <= stats1.size && stats1.size <= size * 2,
+        `first file size: ${size} <= ${stats1.size} <= ${size * 2}`
+      )
+      assert.ok(stats2.size <= size, `second file size: ${stats2.size} <= ${size}`)
+
+      statsFound = true
+    } catch (error) {
+      if (attempt === 4) {
+        throw error // Throw on last attempt
+      }
+      // Files might not be ready yet, continue
+    }
+  }
   // Check that message #4 appears in one of the log files (timing may vary)
   let found4 = false
   for (let i = 1; i <= 4; i++) {
