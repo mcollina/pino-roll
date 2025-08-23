@@ -34,13 +34,13 @@ it('rotate file based on time', async () => {
   stream.write('logged message #2\n')
 
   // Wait for the first file to be created and contain our messages
-  // Use retry logic for Windows timing issues
+  // Use retry logic for macOS/Windows timing issues
   let foundMessage1 = false
-  for (let attempt = 0; attempt < 5; attempt++) {
+  for (let attempt = 0; attempt < 10; attempt++) {
     if (foundMessage1) break
 
     if (attempt > 0) {
-      await sleep(200) // Wait between attempts
+      await sleep(300) // Wait between attempts
     }
 
     try {
@@ -55,6 +55,22 @@ it('rotate file based on time', async () => {
   }
 
   if (!foundMessage1) {
+    // Add debug info for CI failures
+    try {
+      const files = await readdir(logFolder)
+      const logFiles = files.filter(f => f.startsWith('log.') && f.endsWith('.log'))
+      console.error(`[DEBUG-FAILURE] Available files: ${logFiles.join(', ')}`)
+      for (const f of logFiles.slice(0, 3)) {
+        try {
+          const content = await readFile(join(logFolder, f), 'utf8')
+          console.error(`[DEBUG-FAILURE] ${f} content: "${content.replace(/\n/g, '\\n')}"`)
+        } catch (e) {
+          console.error(`[DEBUG-FAILURE] Could not read ${f}: ${e.message}`)
+        }
+      }
+    } catch (e) {
+      console.error(`[DEBUG-FAILURE] Could not list files: ${e.message}`)
+    }
     throw new Error('Failed to find message #1 in first log file after multiple attempts')
   }
 
