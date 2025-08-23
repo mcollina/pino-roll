@@ -114,13 +114,13 @@ it('rotate file based on time', async () => {
 
   // Try reading files with retry logic for timing issues
   const maxRetries = process.platform === 'win32' ? 8 : 6
-  const retryDelay = process.platform === 'win32' ? 200 : 150
-  
+  const fileRetryDelay = process.platform === 'win32' ? 200 : 150
+
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     if (found1and2 && found3or4) break
 
     if (attempt > 0) {
-      await sleep(retryDelay) // Wait between attempts
+      await sleep(fileRetryDelay) // Wait between attempts
     }
 
     for (const fileNum of logFiles) {
