@@ -34,9 +34,29 @@ it('rotate file based on time', async () => {
   stream.write('logged message #2\n')
 
   // Wait for the first file to be created and contain our messages
-  // Increase timeout for Windows which can be slower
-  const timeout = process.platform === 'win32' ? 5000 : 1000
-  await waitForRotationComplete(file, 1, 'logged message #1', { timeout })
+  // Use retry logic for Windows timing issues
+  let foundMessage1 = false
+  for (let attempt = 0; attempt < 5; attempt++) {
+    if (foundMessage1) break
+    
+    if (attempt > 0) {
+      await sleep(200) // Wait between attempts
+    }
+
+    try {
+      await waitForFile(`${file}.1.log`)
+      const content = await readFile(`${file}.1.log`, 'utf8')
+      if (content.includes('logged message #1')) {
+        foundMessage1 = true
+      }
+    } catch (error) {
+      // File might not be ready yet, continue
+    }
+  }
+
+  if (!foundMessage1) {
+    throw new Error('Failed to find message #1 in first log file after multiple attempts')
+  }
 
   // Wait for rotation to occur - we'll know it happened when we can write to a new file
   await waitForCondition(
