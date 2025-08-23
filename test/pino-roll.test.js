@@ -36,11 +36,14 @@ it('rotate file based on time', async () => {
   // Wait for the first file to be created and contain our messages
   // Use retry logic for macOS/Windows timing issues
   let foundMessage1 = false
-  for (let attempt = 0; attempt < 10; attempt++) {
+  const maxAttempts = process.platform === 'win32' ? 15 : 10
+  const retryDelay = process.platform === 'win32' ? 500 : 300
+  
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
     if (foundMessage1) break
 
     if (attempt > 0) {
-      await sleep(300) // Wait between attempts
+      await sleep(retryDelay) // Wait between attempts
     }
 
     try {
