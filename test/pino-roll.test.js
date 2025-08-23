@@ -38,7 +38,7 @@ it('rotate file based on time', async () => {
   let foundMessage1 = false
   const maxAttempts = process.platform === 'win32' ? 15 : 10
   const retryDelay = process.platform === 'win32' ? 500 : 300
-  
+
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     if (foundMessage1) break
 
