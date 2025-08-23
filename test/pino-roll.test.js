@@ -38,7 +38,7 @@ it('rotate file based on time', async () => {
   let foundMessage1 = false
   for (let attempt = 0; attempt < 5; attempt++) {
     if (foundMessage1) break
-    
+
     if (attempt > 0) {
       await sleep(200) // Wait between attempts
     }
