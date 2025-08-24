@@ -364,7 +364,7 @@ it('remove pre-existing log files when removing files based on count when limit.
   // Write third message and wait for rotation and cleanup
   await sleep(1100)
   stream.write('logged message #3\n')
-  
+
   // We've already had 2 cleanup-complete events from the previous rotations
   // The third message goes into the current active file, no need to wait for another event
   // Just add a small delay to let the message get written
