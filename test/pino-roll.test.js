@@ -315,7 +315,7 @@ it('do not remove pre-existing file when removing files based on count', async (
   await assert.rejects(stat(`${file}.6.log`), 'no other files created')
 })
 
-it('remove pre-existing log files when removing files based on count when limit.removeOtherLogFiles', async () => {
+it('remove pre-existing log files when removing files based on count when limit.removeOtherLogFiles', { skip: process.platform !== 'linux' }, async () => {
   const dateFormat = 'HH-mm-ss'
   const notLogFileName = join(logFolder, 'notLogFile')
   const baseFile = join(logFolder, 'log')
