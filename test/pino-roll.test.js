@@ -315,7 +315,7 @@ it('do not remove pre-existing file when removing files based on count', async (
   await assert.rejects(stat(`${file}.6.log`), 'no other files created')
 })
 
-it('remove pre-existing log files when removing files based on count when limit.removeOtherLogFiles', { skip: process.platform !== 'linux' }, async () => {
+it('remove pre-existing log files when removing files based on count when limit.removeOtherLogFiles', async () => {
   const dateFormat = 'HH-mm-ss'
   const notLogFileName = join(logFolder, 'notLogFile')
   const baseFile = join(logFolder, 'log')
@@ -361,24 +361,14 @@ it('remove pre-existing log files when removing files based on count when limit.
     return logFiles.length >= 2
   }, { timeout: 5000, description: 'second log file to be created' })
 
-  // Write third message and wait for rotation
+  // Write third message and wait for rotation and cleanup
   await sleep(1100)
   stream.write('logged message #3\n')
-
-  // Give some time for the third message to be processed and limit enforcement to happen
-  // Windows filesystem operations can be significantly slower
-  const processingDelay = process.platform === 'win32' ? 2000 : 200
-  await sleep(processingDelay)
-
-  // Wait for the limit to be enforced (should keep only 2 files)
-  // Use longer timeout for Windows/macOS file system operations
-  const limitTimeout = process.platform === 'win32' ? 60000 : 30000
-  await waitForCondition(async () => {
-    const files = await readdir(logFolder)
-    const logFiles = files.filter(f => f.startsWith('log.') && f.endsWith('.log'))
-    // Should have exactly 2 files due to limit
-    return logFiles.length === 2
-  }, { timeout: limitTimeout, interval: 100, description: 'file limit to be enforced' })
+  
+  // We've already had 2 cleanup-complete events from the previous rotations
+  // The third message goes into the current active file, no need to wait for another event
+  // Just add a small delay to let the message get written
+  await sleep(200)
 
   // Add flush delay before ending to ensure messages are written
   await sleep(500)

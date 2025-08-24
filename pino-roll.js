@@ -152,7 +152,14 @@ module.exports = async function ({
           createSymlink(fileName)
         }
         if (limit) {
+          // Run cleanup asynchronously and emit event when complete
           removeOldFiles({ ...limit, baseFile: file, dateFormat, extension, createdFileNames, newFileName: fileName })
+            .then(() => {
+              destination.emit('cleanup-complete')
+            })
+            .catch((cleanupError) => {
+              destination.emit('error', cleanupError)
+            })
         }
 
         // Notify that roll operation is complete
