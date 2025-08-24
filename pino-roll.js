@@ -120,14 +120,15 @@ module.exports = async function ({
         currentSize = 0
         fileName = buildFileName(file, date, ++number, extension)
         // delay to let the destination finish its write
-        destination.once('drain', roll)
+        destination.once('drain', () => roll())
       }
     })
   }
 
-  function roll () {
+  function roll (callback) {
     // Don't roll if the stream is destroyed
     if (destination.destroyed) {
+      if (callback) callback()
       return
     }
 
@@ -135,6 +136,7 @@ module.exports = async function ({
     destination.flush((err) => {
       if (err) {
         destination.emit('error', err)
+        if (callback) callback(err)
         return
       }
 
@@ -145,6 +147,9 @@ module.exports = async function ({
       if (limit) {
         removeOldFiles({ ...limit, baseFile: file, dateFormat, extension, createdFileNames, newFileName: fileName })
       }
+
+      // Notify that roll operation is complete
+      if (callback) callback()
     })
   }
 
@@ -155,9 +160,18 @@ module.exports = async function ({
       date = parseDate(dateFormat, frequencySpec)
       if (dateFormat && date && date !== prevDate) number = 0
       fileName = buildFileName(file, date, ++number, extension)
-      roll()
-      frequencySpec.next = getNext(frequency)
-      scheduleRoll()
+
+      // Only schedule next roll after current roll completes
+      roll((err) => {
+        if (err) {
+          // Log error but continue scheduling to maintain rotation
+          destination.emit('error', err)
+        }
+
+        // Schedule the next roll only after current roll is complete
+        frequencySpec.next = getNext(frequency)
+        scheduleRoll()
+      })
     }, frequencySpec.next - Date.now()).unref()
   }
 
