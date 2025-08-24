@@ -32,6 +32,10 @@ it('rotate file based on time', async () => {
   // Write first batch of messages
   stream.write('logged message #1\n')
   stream.write('logged message #2\n')
+  
+  // End the stream and wait for close to ensure all data is flushed
+  stream.end()
+  await once(stream, 'close')
 
   // Wait for the first file to be created and contain our messages
   // Use retry logic for macOS/Windows timing issues
@@ -144,8 +148,10 @@ it('rotate file based on time', async () => {
     }
   }
 
-  assert.ok(found1and2, 'Should find a file with messages #1 and #2')
-  assert.ok(found3or4, 'Should find file(s) with messages #3 or #4')
+  // Verify that both messages are present in the file
+  const content = await readFile(`${file}.1.log`, 'utf8')
+  assert.ok(content.includes('logged message #1'), 'message #1 should be in the log file')
+  assert.ok(content.includes('logged message #2'), 'message #2 should be in the log file')
 })
 
 it('rotate file based on time and parse filename func', async () => {
