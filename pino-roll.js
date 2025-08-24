@@ -140,16 +140,28 @@ module.exports = async function ({
         return
       }
 
-      destination.reopen(fileName)
-      if (symlink) {
-        createSymlink(fileName)
-      }
-      if (limit) {
-        removeOldFiles({ ...limit, baseFile: file, dateFormat, extension, createdFileNames, newFileName: fileName })
+      // Check again if stream is destroyed after flush completes
+      if (destination.destroyed) {
+        if (callback) callback()
+        return
       }
 
-      // Notify that roll operation is complete
-      if (callback) callback()
+      try {
+        destination.reopen(fileName)
+        if (symlink) {
+          createSymlink(fileName)
+        }
+        if (limit) {
+          removeOldFiles({ ...limit, baseFile: file, dateFormat, extension, createdFileNames, newFileName: fileName })
+        }
+
+        // Notify that roll operation is complete
+        if (callback) callback()
+      } catch (error) {
+        // Handle reopen errors gracefully
+        destination.emit('error', error)
+        if (callback) callback(error)
+      }
     })
   }
 
