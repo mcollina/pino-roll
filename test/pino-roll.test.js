@@ -32,7 +32,7 @@ it('rotate file based on time', async () => {
   // Write first batch of messages
   stream.write('logged message #1\n')
   stream.write('logged message #2\n')
-  
+
   // End the stream and wait for close to ensure all data is flushed
   stream.end()
   await once(stream, 'close')
