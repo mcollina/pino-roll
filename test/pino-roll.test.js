@@ -33,10 +33,6 @@ it('rotate file based on time', async () => {
   stream.write('logged message #1\n')
   stream.write('logged message #2\n')
 
-  // End the stream and wait for close to ensure all data is flushed
-  stream.end()
-  await once(stream, 'close')
-
   // Wait for the first file to be created and contain our messages
   // Use retry logic for macOS/Windows timing issues
   let foundMessage1 = false
