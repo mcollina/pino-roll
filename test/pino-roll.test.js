@@ -373,15 +373,16 @@ it('remove pre-existing log files when removing files based on count when limit.
   await sleep(1100)
   stream.write('logged message #2\n')
 
-  // After first rotation, old files should be cleaned up to maintain limit
-  await sleep(200) // Give time for rotation and cleanup
+  // Give time for rotation and cleanup to complete - more time in CI
+  const cleanupDelay = (process.env.CI && process.platform === 'win32') ? 1000 : 300
+  await sleep(cleanupDelay)
 
   // Write third message after another rotation interval
   await sleep(1100)
   stream.write('logged message #3\n')
 
-  // Give time for the last rotation and cleanup to complete
-  await sleep(200)
+  // Give time for the last rotation and cleanup to complete - more time in CI
+  await sleep(cleanupDelay)
 
   // Add flush delay before ending to ensure messages are written
   await sleep(500)
