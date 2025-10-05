@@ -53,10 +53,10 @@ async function waitForFile (filePath, { timeout = 5000, interval = 10 } = {}) {
  * @param {function} condition - Function that returns true when condition is met
  * @param {object} options - Options
  * @param {number} options.timeout - Max time to wait in ms (default: 5000)
- * @param {number} options.interval - Check interval in ms (default: 10)
+ * @param {number} options.interval - Check interval in ms (default: 200)
  * @param {string} options.description - Description for error messages
  */
-async function waitForCondition (condition, { timeout = 5000, interval = 10, description = 'condition' } = {}) {
+async function waitForCondition (condition, { timeout = 5000, interval = 200, description = 'condition' } = {}) {
   const startTime = Date.now()
 
   while (Date.now() - startTime < timeout) {

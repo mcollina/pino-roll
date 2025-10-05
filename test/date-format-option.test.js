@@ -167,60 +167,55 @@ it('rotate file based on size and date format with custom frequency', async () =
   await sleep(1010)
   stream.write('logged message #4\n')
 
-  // Add delay for macOS/Windows filesystem timing
-  if (process.platform === 'darwin' || process.platform === 'win32') {
-    await sleep(100)
-  }
-
   stream.end()
   await once(stream, 'close')
 
-  // Additional delay for flush timing across all platforms
-  await sleep(100)
+  // Poll for all three log files to exist with correct sizes
+  await waitForCondition(
+    async () => {
+      try {
+        const stats1 = await stat(`${fileWithDate}.1.log`)
+        const stats2 = await stat(`${fileWithDate}.2.log`)
+        await stat(`${fileWithDate}.3.log`) // Verify third file exists
 
-  // Retry logic for file stats to handle timing variations
-  let statsFound = false
-  for (let attempt = 0; attempt < 5; attempt++) {
-    if (statsFound) break
+        // Verify file sizes
+        const size1Valid = size <= stats1.size && stats1.size <= size * 2
+        const size2Valid = stats2.size <= size
 
-    if (attempt > 0) {
-      await sleep(200) // Wait between attempts
-    }
-
-    try {
-      const stats1 = await stat(`${fileWithDate}.1.log`)
-      const stats2 = await stat(`${fileWithDate}.2.log`)
-      await stat(`${fileWithDate}.3.log`) // Verify third file exists
-
-      // Verify file sizes
-      assert.ok(
-        size <= stats1.size && stats1.size <= size * 2,
-        `first file size: ${size} <= ${stats1.size} <= ${size * 2}`
-      )
-      assert.ok(stats2.size <= size, `second file size: ${stats2.size} <= ${size}`)
-
-      statsFound = true
-    } catch (error) {
-      if (attempt === 4) {
-        throw error // Throw on last attempt
+        return size1Valid && size2Valid
+      } catch (error) {
+        return false
       }
-      // Files might not be ready yet, continue
-    }
-  }
-  // Check that message #4 appears in one of the log files (timing may vary)
-  let found4 = false
-  for (let i = 1; i <= 4; i++) {
-    try {
-      const content = await readFile(`${fileWithDate}.${i}.log`, 'utf8')
-      if (content.includes('#4')) {
-        found4 = true
-        break
+    },
+    { timeout: 5000, interval: 200, description: 'files to exist with correct sizes' }
+  )
+
+  // Verify file sizes one more time for the assertion
+  const stats1 = await stat(`${fileWithDate}.1.log`)
+  const stats2 = await stat(`${fileWithDate}.2.log`)
+  assert.ok(
+    size <= stats1.size && stats1.size <= size * 2,
+    `first file size: ${size} <= ${stats1.size} <= ${size * 2}`
+  )
+  assert.ok(stats2.size <= size, `second file size: ${stats2.size} <= ${size}`)
+
+  // Poll for message #4 to appear in one of the log files
+  await waitForCondition(
+    async () => {
+      for (let i = 1; i <= 5; i++) {
+        try {
+          const content = await readFile(`${fileWithDate}.${i}.log`, 'utf8')
+          if (content.includes('#4')) {
+            return true
+          }
+        } catch (error) {
+          // File might not exist, continue checking
+        }
       }
-    } catch (error) {
-      // File might not exist, continue checking
-    }
-  }
-  assert.ok(found4, 'Message #4 should be found in one of the rotated files')
+      return false
+    },
+    { timeout: 5000, interval: 200, description: 'Message #4 to be found in one of the rotated files' }
+  )
   // On slower platforms, timing variations can cause up to 5 files
   await assert.rejects(stat(`${fileWithDate}.6.log`), 'no more than 5 files created')
 })

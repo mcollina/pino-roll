@@ -373,16 +373,9 @@ it('remove pre-existing log files when removing files based on count when limit.
   await sleep(1100)
   stream.write('logged message #2\n')
 
-  // Give time for rotation and cleanup to complete - more time in CI
-  const cleanupDelay = (process.env.CI && process.platform === 'win32') ? 1000 : 300
-  await sleep(cleanupDelay)
-
   // Write third message after another rotation interval
   await sleep(1100)
   stream.write('logged message #3\n')
-
-  // Give time for the last rotation and cleanup to complete - more time in CI
-  await sleep(cleanupDelay)
 
   // Add flush delay before ending to ensure messages are written
   await sleep(500)
@@ -390,15 +383,19 @@ it('remove pre-existing log files when removing files based on count when limit.
   stream.end()
   await once(stream, 'close')
 
-  // Additional delay for flush callbacks to complete
-  await sleep(200)
-
-  // Add delay for virtual filesystem on Windows/macOS
-  if (process.env.CI && (process.platform === 'win32' || process.platform === 'darwin')) {
-    await sleep(1000) // 1 second in CI for virtual filesystem sync
-  } else if (process.platform === 'win32' || process.platform === 'darwin') {
-    await sleep(500)
-  }
+  // Poll for exactly 2 files to remain (with cleanup complete)
+  await waitForCondition(
+    async () => {
+      try {
+        const files = await readdir(logFolder)
+        const logFiles = files.filter(f => f.startsWith('log.') && f.endsWith('.log'))
+        return logFiles.length === 2
+      } catch (error) {
+        return false
+      }
+    },
+    { timeout: 5000, interval: 200, description: 'exactly 2 log files to remain after cleanup' }
+  )
 
   // Verify the non-log file is untouched
   const nonLogContent = await readFile(notLogFileName, 'utf8')
@@ -416,6 +413,28 @@ it('remove pre-existing log files when removing files based on count when limit.
 
   assert.strictEqual(finalLogFiles.length, 2, 'exactly 2 log files remain')
 
+  // Poll for messages to be written to files
+  await waitForCondition(
+    async () => {
+      try {
+        const contents = await Promise.all(
+          finalLogFiles.map(async f => {
+            const content = await readFile(join(logFolder, f), 'utf8')
+            return content
+          })
+        )
+        const allContent = contents.join('\n')
+        const hasMessage1 = allContent.includes('#1')
+        const hasMessage2 = allContent.includes('#2')
+        const hasMessage3 = allContent.includes('#3')
+        return hasMessage1 || hasMessage2 || hasMessage3
+      } catch (error) {
+        return false
+      }
+    },
+    { timeout: 5000, interval: 200, description: 'at least one message is present in remaining files' }
+  )
+
   // Read the files and verify they contain the expected messages
   const contents = await Promise.all(
     finalLogFiles.map(async f => {
@@ -432,18 +451,11 @@ it('remove pre-existing log files when removing files based on count when limit.
   const hasMessage2 = allContent.includes('#2')
   const hasMessage3 = allContent.includes('#3')
 
-  // On Windows, timing issues can cause messages to be in different files than expected
-  // Relax the assertion to be more flexible about message distribution
-  if (process.platform === 'win32') {
-    // On Windows, just check that files exist - content might be delayed
-    assert.ok(finalLogFiles.length === 2, `should have exactly 2 files, got ${finalLogFiles.length}`)
-  } else {
-    assert.ok(hasMessage1 || hasMessage2 || hasMessage3, 'at least one message is present in remaining files')
+  assert.ok(hasMessage1 || hasMessage2 || hasMessage3, 'at least one message is present in remaining files')
 
-    // Since we have 2 files and 3 messages, we should have at least 1 message total
-    const messageCount = [hasMessage1, hasMessage2, hasMessage3].filter(Boolean).length
-    assert.ok(messageCount >= 1, `at least 1 message should be present, found ${messageCount}`)
-  }
+  // Since we have 2 files and 3 messages, we should have at least 1 message total
+  const messageCount = [hasMessage1, hasMessage2, hasMessage3].filter(Boolean).length
+  assert.ok(messageCount >= 1, `at least 1 message should be present, found ${messageCount}`)
 })
 
 it('throw on missing file parameter', async () => {
