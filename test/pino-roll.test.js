@@ -380,8 +380,12 @@ it('remove pre-existing log files when removing files based on count when limit.
   // Add flush delay before ending to ensure messages are written
   await sleep(500)
 
-  // Wait for cleanup to complete before closing stream
-  // Cleanup runs asynchronously after each rotation, and may take significant time on Windows
+  stream.end()
+  await once(stream, 'close')
+
+  // Wait for cleanup to complete after stream is closed
+  // Cleanup runs asynchronously after rotations, Windows needs significant time
+  // especially on newer versions (22, 24) with stricter file locking
   const cleanupTimeout = process.platform === 'win32' ? 120000 : 10000
   await waitForCondition(
     async () => {
@@ -395,9 +399,6 @@ it('remove pre-existing log files when removing files based on count when limit.
     },
     { timeout: cleanupTimeout, interval: 200, description: 'exactly 2 log files to remain after cleanup' }
   )
-
-  stream.end()
-  await once(stream, 'close')
 
   // Verify the non-log file is untouched
   const nonLogContent = await readFile(notLogFileName, 'utf8')
