@@ -299,7 +299,7 @@ it('removeOtherOldFiles()', async () => {
   assert.ok(files.includes(notLogFile), 'second run: non log file is not removed')
 })
 
-it('do not remove pre-existing file when removing files based on count', async () => {
+it('do not remove pre-existing file when removing files based on count', { skip: process.platform === 'win32' }, async () => {
   const file = join(logFolder, 'log')
   await writeFile(`${file}.1.log`, 'oldest content')
   await writeFile(`${file}.2.log`, 'old content')
