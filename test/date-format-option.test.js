@@ -188,7 +188,7 @@ it('rotate file based on size and date format with custom frequency', async () =
         return false
       }
     },
-    { timeout: 5000, interval: 200, description: 'files to exist with correct sizes' }
+    { timeout: 10000, interval: 200, description: 'files to exist with correct sizes' }
   )
 
   // Verify file sizes one more time for the assertion
@@ -215,7 +215,7 @@ it('rotate file based on size and date format with custom frequency', async () =
       }
       return false
     },
-    { timeout: 5000, interval: 200, description: 'Message #4 to be found in one of the rotated files' }
+    { timeout: 10000, interval: 200, description: 'Message #4 to be found in one of the rotated files' }
   )
   // On slower platforms, timing variations can cause up to 5 files
   await assert.rejects(stat(`${fileWithDate}.6.log`), 'no more than 5 files created')

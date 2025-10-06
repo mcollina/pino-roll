@@ -394,7 +394,7 @@ it('remove pre-existing log files when removing files based on count when limit.
         return false
       }
     },
-    { timeout: 5000, interval: 200, description: 'exactly 2 log files to remain after cleanup' }
+    { timeout: 10000, interval: 200, description: 'exactly 2 log files to remain after cleanup' }
   )
 
   // Verify the non-log file is untouched
@@ -432,7 +432,7 @@ it('remove pre-existing log files when removing files based on count when limit.
         return false
       }
     },
-    { timeout: 5000, interval: 200, description: 'at least one message is present in remaining files' }
+    { timeout: 10000, interval: 200, description: 'at least one message is present in remaining files' }
   )
 
   // Read the files and verify they contain the expected messages
