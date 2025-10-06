@@ -394,7 +394,7 @@ it('remove pre-existing log files when removing files based on count when limit.
         console.log(`[DEBUG] Current log file count: ${logFiles.length}, files: ${logFiles.join(', ')}`)
         return logFiles.length === 2
       } catch (error) {
-        console.error(`[DEBUG] Error reading directory:`, error)
+        console.error('[DEBUG] Error reading directory:', error)
         return false
       }
     },
