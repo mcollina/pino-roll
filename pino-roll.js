@@ -106,8 +106,11 @@ module.exports = async function ({
   }
 
   let rollTimeout
+  let isClosing = false
+
   if (frequencySpec) {
     destination.once('close', () => {
+      isClosing = true
       clearTimeout(rollTimeout)
     })
     scheduleRoll()
@@ -126,8 +129,8 @@ module.exports = async function ({
   }
 
   function roll (callback) {
-    // Don't roll if the stream is destroyed
-    if (destination.destroyed) {
+    // Don't roll if the stream is destroyed or closing
+    if (destination.destroyed || isClosing) {
       if (callback) callback()
       return
     }
@@ -140,8 +143,8 @@ module.exports = async function ({
         return
       }
 
-      // Check again if stream is destroyed after flush completes
-      if (destination.destroyed) {
+      // Check again if stream is destroyed or closing after flush completes
+      if (destination.destroyed || isClosing) {
         if (callback) callback()
         return
       }
@@ -196,6 +199,7 @@ module.exports = async function ({
 
   // Clean up the timeout when the stream is closed or destroyed
   destination.once('close', () => {
+    isClosing = true
     clearTimeout(rollTimeout)
   })
 
