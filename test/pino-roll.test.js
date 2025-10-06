@@ -384,15 +384,17 @@ it('remove pre-existing log files when removing files based on count when limit.
   await once(stream, 'close')
 
   // Poll for exactly 2 files to remain (with cleanup complete)
-  // Windows needs significantly more time due to retry logic (up to 5s per file) and slower filesystem
-  const cleanupTimeout = process.platform === 'win32' ? 30000 : 10000
+  // Windows needs significantly more time due to retry logic (up to 30s per file) and slower filesystem
+  const cleanupTimeout = process.platform === 'win32' ? 60000 : 10000
   await waitForCondition(
     async () => {
       try {
         const files = await readdir(logFolder)
         const logFiles = files.filter(f => f.startsWith('log.') && f.endsWith('.log'))
+        console.log(`[DEBUG] Current log file count: ${logFiles.length}, files: ${logFiles.join(', ')}`)
         return logFiles.length === 2
       } catch (error) {
+        console.error(`[DEBUG] Error reading directory:`, error)
         return false
       }
     },
