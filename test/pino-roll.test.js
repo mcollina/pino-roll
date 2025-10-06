@@ -384,8 +384,8 @@ it('remove pre-existing log files when removing files based on count when limit.
   await once(stream, 'close')
 
   // Poll for exactly 2 files to remain (with cleanup complete)
-  // Windows needs significantly more time due to retry logic (up to 30s per file) and slower filesystem
-  const cleanupTimeout = process.platform === 'win32' ? 60000 : 10000
+  // Windows needs more time for async cleanup to complete (up to 1s per file retry)
+  const cleanupTimeout = process.platform === 'win32' ? 10000 : 5000
   await waitForCondition(
     async () => {
       try {
