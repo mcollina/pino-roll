@@ -4,7 +4,7 @@ const SonicBoom = require('sonic-boom')
 const {
   buildFileName,
   removeOldFiles,
-  createSymlink,
+  createSymlinkSync,
   detectLastNumber,
   parseSize,
   parseFrequency,
@@ -102,7 +102,7 @@ module.exports = async function ({
   const destination = new SonicBoom({ ...opts, dest: fileName })
 
   if (symlink) {
-    createSymlink(fileName)
+    createSymlinkSync(fileName)
   }
 
   let rollTimeout
@@ -152,7 +152,7 @@ module.exports = async function ({
       try {
         destination.reopen(fileName)
         if (symlink) {
-          createSymlink(fileName)
+          createSymlinkSync(fileName)
         }
         if (limit) {
           // Run cleanup asynchronously and emit event when complete
