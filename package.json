@@ -1,6 +1,6 @@
 {
   "name": "pino-roll",
-  "version": "3.1.0",
+  "version": "4.0.0",
   "description": "A Pino transport that automatically rolls your log files",
   "main": "pino-roll.js",
   "scripts": {
