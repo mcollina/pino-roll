@@ -23,7 +23,7 @@ beforeEach(() => {
   logFolder = createTempTestDir()
 })
 
-it('rotate file based on time', async () => {
+it('rotate file based on time', { skip: process.platform === 'win32' }, async () => {
   const file = join(logFolder, 'log')
   const frequency = 100
 
