@@ -384,6 +384,8 @@ it('remove pre-existing log files when removing files based on count when limit.
   await once(stream, 'close')
 
   // Poll for exactly 2 files to remain (with cleanup complete)
+  // Windows CI needs more time for async file cleanup operations
+  const cleanupTimeout = (process.env.CI && process.platform === 'win32') ? 20000 : 10000
   await waitForCondition(
     async () => {
       try {
@@ -394,7 +396,7 @@ it('remove pre-existing log files when removing files based on count when limit.
         return false
       }
     },
-    { timeout: 10000, interval: 200, description: 'exactly 2 log files to remain after cleanup' }
+    { timeout: cleanupTimeout, interval: 200, description: 'exactly 2 log files to remain after cleanup' }
   )
 
   // Verify the non-log file is untouched
