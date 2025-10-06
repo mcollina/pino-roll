@@ -4,7 +4,7 @@ const SonicBoom = require('sonic-boom')
 const {
   buildFileName,
   removeOldFiles,
-  createSymlink,
+  createSymlinkSync,
   detectLastNumber,
   parseSize,
   parseFrequency,
@@ -102,12 +102,15 @@ module.exports = async function ({
   const destination = new SonicBoom({ ...opts, dest: fileName })
 
   if (symlink) {
-    createSymlink(fileName)
+    createSymlinkSync(fileName)
   }
 
   let rollTimeout
+  let isClosing = false
+
   if (frequencySpec) {
     destination.once('close', () => {
+      isClosing = true
       clearTimeout(rollTimeout)
     })
     scheduleRoll()
@@ -120,19 +123,56 @@ module.exports = async function ({
         currentSize = 0
         fileName = buildFileName(file, date, ++number, extension)
         // delay to let the destination finish its write
-        destination.once('drain', roll)
+        destination.once('drain', () => roll())
       }
     })
   }
 
-  function roll () {
-    destination.reopen(fileName)
-    if (symlink) {
-      createSymlink(fileName)
+  function roll (callback) {
+    // Don't roll if the stream is destroyed or closing
+    if (destination.destroyed || isClosing) {
+      if (callback) callback()
+      return
     }
-    if (limit) {
-      removeOldFiles({ ...limit, baseFile: file, dateFormat, extension, createdFileNames, newFileName: fileName })
-    }
+
+    // Flush buffered data to disk before rotating the file
+    destination.flush((err) => {
+      if (err) {
+        destination.emit('error', err)
+        if (callback) callback(err)
+        return
+      }
+
+      // Check again if stream is destroyed or closing after flush completes
+      if (destination.destroyed || isClosing) {
+        if (callback) callback()
+        return
+      }
+
+      try {
+        destination.reopen(fileName)
+        if (symlink) {
+          createSymlinkSync(fileName)
+        }
+        if (limit) {
+          // Run cleanup asynchronously and emit event when complete
+          removeOldFiles({ ...limit, baseFile: file, dateFormat, extension, createdFileNames, newFileName: fileName })
+            .then(() => {
+              destination.emit('cleanup-complete')
+            })
+            .catch((cleanupError) => {
+              destination.emit('error', cleanupError)
+            })
+        }
+
+        // Notify that roll operation is complete
+        if (callback) callback()
+      } catch (error) {
+        // Handle reopen errors gracefully
+        destination.emit('error', error)
+        if (callback) callback(error)
+      }
+    })
   }
 
   function scheduleRoll () {
@@ -142,11 +182,26 @@ module.exports = async function ({
       date = parseDate(dateFormat, frequencySpec)
       if (dateFormat && date && date !== prevDate) number = 0
       fileName = buildFileName(file, date, ++number, extension)
-      roll()
-      frequencySpec.next = getNext(frequency)
-      scheduleRoll()
+
+      // Only schedule next roll after current roll completes
+      roll((err) => {
+        if (err) {
+          // Log error but continue scheduling to maintain rotation
+          destination.emit('error', err)
+        }
+
+        // Schedule the next roll only after current roll is complete
+        frequencySpec.next = getNext(frequency)
+        scheduleRoll()
+      })
     }, frequencySpec.next - Date.now()).unref()
   }
+
+  // Clean up the timeout when the stream is closed or destroyed
+  destination.once('close', () => {
+    isClosing = true
+    clearTimeout(rollTimeout)
+  })
 
   return destination
 }

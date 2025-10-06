@@ -11,11 +11,36 @@ on:
       - '*.md'
 
 jobs:
-  build:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4.4.0
+        with:
+          node-version: 22
+
+      - name: Restore cached dependencies
+        uses: actions/cache@v4.2.3
+        with:
+          path: node_modules
+          key: node-modules-${{ hashFiles('package.json') }}
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run Lint
+        run: npm run lint
+
+  test:
+    needs: lint
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
-        node-version: [18, 20]
+        node-version: [20, 22, 24]
         os: [macos-latest, ubuntu-latest, windows-latest]
     steps:
       - name: Checkout
@@ -36,4 +61,4 @@ jobs:
         run: npm install
 
       - name: Run Tests
-        run: npm run test-ci
+        run: npm run test-only
