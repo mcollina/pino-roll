@@ -11,7 +11,8 @@ const {
   buildStream,
   createTempTestDir,
   sleep,
-  waitForFile
+  waitForFile,
+  waitForCondition
 } = require('./utils')
 
 let logFolder
