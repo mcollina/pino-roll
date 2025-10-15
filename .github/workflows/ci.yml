@@ -34,6 +34,9 @@ jobs:
       - name: Run Lint
         run: npm run lint
 
+      - name: Run Typecheck
+        run: npm run typecheck
+
   test:
     needs: lint
     runs-on: ${{ matrix.os }}
