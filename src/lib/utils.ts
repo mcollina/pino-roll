@@ -1,14 +1,51 @@
-'use strict'
+import {
+  readdir,
+  stat,
+  unlink,
+  symlink,
+  lstat,
+  readlink,
+} from 'node:fs/promises'
+import { symlinkSync, unlinkSync, lstatSync, readlinkSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { format, addDays, addHours, parse, isValid } from 'date-fns'
+import { setTimeout as sleep } from 'node:timers/promises'
 
-const { readdir, stat, unlink, symlink, lstat, readlink } = require('fs/promises')
-const { symlinkSync, unlinkSync, lstatSync, readlinkSync } = require('fs')
-const { dirname, join } = require('path')
-const { format, addDays, addHours, parse, isValid } = require('date-fns')
-const { promisify } = require('util')
+export interface FrequencySpec {
+  frequency: string | number;
+  start: number;
+  next: number;
+}
 
-const sleep = promisify(setTimeout)
+export interface LogFileInfo {
+  fileName: string;
+  fileTime: number;
+  fileNumber: number;
+}
 
-function parseSize (size) {
+export interface LimitOptions {
+  count: number;
+  removeOtherLogFiles?: boolean;
+}
+
+export interface SanitizedFile {
+  file: string;
+  extension: string;
+}
+
+export interface RemoveOldFilesOptions {
+  count: number;
+  removeOtherLogFiles?: boolean;
+  baseFile: string;
+  dateFormat?: string;
+  extension?: string;
+  createdFileNames: string[];
+  newFileName: string;
+}
+
+export function parseSize (
+  size: string | number | null | undefined
+): number | null {
   let multiplier = 1024 ** 2
   if (typeof size !== 'string' && typeof size !== 'number') {
     return null
@@ -18,7 +55,14 @@ function parseSize (size) {
     if (match) {
       const unit = match[2]?.toLowerCase()
       size = +match[1]
-      multiplier = unit === 'g' ? 1024 ** 3 : unit === 'k' ? 1024 : unit === 'b' ? 1 : 1024 ** 2
+      multiplier =
+        unit === 'g'
+          ? 1024 ** 3
+          : unit === 'k'
+            ? 1024
+            : unit === 'b'
+              ? 1
+              : 1024 ** 2
     } else {
       throw new Error(`${size} is not a valid size in KB, MB or GB`)
     }
@@ -26,7 +70,9 @@ function parseSize (size) {
   return size * multiplier
 }
 
-function parseFrequency (frequency) {
+export function parseFrequency (
+  frequency?: string | number
+): FrequencySpec | null {
   const today = new Date()
   if (frequency === 'daily') {
     const start = today.setHours(0, 0, 0, 0)
@@ -37,16 +83,18 @@ function parseFrequency (frequency) {
     return { frequency, start, next: getNextHour(start) }
   }
   if (typeof frequency === 'number') {
-    const start = today.getTime() - today.getTime() % frequency
+    const start = today.getTime() - (today.getTime() % frequency)
     return { frequency, start, next: getNextCustom(frequency) }
   }
   if (frequency) {
-    throw new Error(`${frequency} is neither a supported frequency or a number of milliseconds`)
+    throw new Error(
+      `${frequency} is neither a supported frequency or a number of milliseconds`
+    )
   }
   return null
 }
 
-function validateLimitOptions (limit) {
+export function validateLimitOptions (limit?: LimitOptions): void {
   if (limit) {
     if (typeof limit !== 'object') {
       throw new Error('limit must be an object')
@@ -54,64 +102,87 @@ function validateLimitOptions (limit) {
     if (typeof limit.count !== 'number' || limit.count <= 0) {
       throw new Error('limit.count must be a number greater than 0')
     }
-    if (typeof limit.removeOtherLogFiles !== 'undefined' && typeof limit.removeOtherLogFiles !== 'boolean') {
+    if (
+      typeof limit.removeOtherLogFiles !== 'undefined' &&
+      typeof limit.removeOtherLogFiles !== 'boolean'
+    ) {
       throw new Error('limit.removeOtherLogFiles must be boolean')
     }
   }
 }
 
-function getNextDay (start) {
+function getNextDay (start: number): number {
   return addDays(new Date(start), 1).setHours(0, 0, 0, 0)
 }
 
-function getNextHour (start) {
+function getNextHour (start: number): number {
   return addHours(new Date(start), 1).setMinutes(0, 0, 0)
 }
 
-function getNextCustom (frequency) {
+function getNextCustom (frequency: number): number {
   const time = Date.now()
-  return time - time % frequency + frequency
+  return time - (time % frequency) + frequency
 }
 
-function getNext (frequency) {
+export function getNext (frequency: string | number): number {
   if (frequency === 'daily') {
     return getNextDay(new Date().setHours(0, 0, 0, 0))
   }
   if (frequency === 'hourly') {
     return getNextHour(new Date().setMinutes(0, 0, 0))
   }
-  return getNextCustom(frequency)
+  return getNextCustom(frequency as number)
 }
 
-function getFileName (fileVal) {
+export function getFileName (fileVal: string | (() => string)): string {
   if (!fileVal) {
     throw new Error('No file name provided')
   }
   return typeof fileVal === 'function' ? fileVal() : fileVal
 }
 
-function buildFileName (fileVal, date, lastNumber = 1, extension) {
+export function buildFileName (
+  fileVal: string | (() => string),
+  date: string | null,
+  lastNumber = 1,
+  extension?: string
+): string {
   const dateStr = date ? `.${date}` : ''
-  const extensionStr = typeof extension !== 'string' ? '' : extension.startsWith('.') ? extension : `.${extension}`
+  const extensionStr =
+    typeof extension !== 'string'
+      ? ''
+      : extension.startsWith('.')
+        ? extension
+        : `.${extension}`
   return `${getFileName(fileVal)}${dateStr}.${lastNumber}${extensionStr}`
 }
 
-function identifyLogFile (checkedFileName, fileVal, dateFormat, extension) {
+export function identifyLogFile (
+  checkedFileName: string,
+  fileVal: string | (() => string),
+  dateFormat?: string,
+  extension?: string
+): LogFileInfo | false {
   const baseFileNameStr = getFileName(fileVal)
   if (!checkedFileName.startsWith(baseFileNameStr)) return false
   const checkFileNameSegments = checkedFileName
     .slice(baseFileNameStr.length + 1)
     .split('.')
   let expectedSegmentCount = 1
-  if (typeof dateFormat === 'string' && dateFormat.length > 0) expectedSegmentCount++
-  if (typeof extension === 'string' && extension.length > 0) expectedSegmentCount++
-  const extensionStr = typeof extension !== 'string' ? '' : extension.startsWith('.') ? extension.slice(1) : extension
+  if (typeof dateFormat === 'string' && dateFormat.length > 0) { expectedSegmentCount++ }
+  if (typeof extension === 'string' && extension.length > 0) { expectedSegmentCount++ }
+  const extensionStr =
+    typeof extension !== 'string'
+      ? ''
+      : extension.startsWith('.')
+        ? extension.slice(1)
+        : extension
   if (checkFileNameSegments.length !== expectedSegmentCount) return false
   if (extensionStr.length > 0) {
     const chkExtension = checkFileNameSegments.pop()
     if (extensionStr !== chkExtension) return false
   }
-  const chkFileNumber = checkFileNameSegments.pop()
+  const chkFileNumber = checkFileNameSegments.pop()!
   const fileNumber = Number(chkFileNumber)
   if (!Number.isInteger(fileNumber)) {
     return false
@@ -125,7 +196,7 @@ function identifyLogFile (checkedFileName, fileVal, dateFormat, extension) {
   return { fileName: checkedFileName, fileTime, fileNumber }
 }
 
-async function getFileSize (filePath) {
+export async function getFileSize (filePath: string): Promise<number> {
   try {
     const fileStats = await stat(filePath)
     return fileStats.size
@@ -134,17 +205,29 @@ async function getFileSize (filePath) {
   }
 }
 
-async function detectLastNumber (fileVal, time = null, fileExtension = '') {
+export async function detectLastNumber (
+  fileVal: string | (() => string),
+  time: number | null = null,
+  fileExtension = ''
+): Promise<number> {
   const fileName = getFileName(fileVal)
   try {
-    const numbers = await readFileTrailingNumbers(dirname(fileName), time, fileExtension)
+    const numbers = await readFileTrailingNumbers(
+      dirname(fileName),
+      time,
+      fileExtension
+    )
     return numbers.sort((a, b) => b - a)[0]
   } catch {
     return 1
   }
 }
 
-async function readFileTrailingNumbers (folder, time, fileExtension) {
+async function readFileTrailingNumbers (
+  folder: string,
+  time: number | null,
+  fileExtension: string
+): Promise<number[]> {
   const numbers = [1]
   for (const file of await readdir(folder)) {
     if (time && !(await isMatchingTime(join(folder, file), time))) {
@@ -158,7 +241,10 @@ async function readFileTrailingNumbers (folder, time, fileExtension) {
   return numbers
 }
 
-function extractTrailingNumber (fileName, fileExtension) {
+function extractTrailingNumber (
+  fileName: string,
+  fileExtension: string
+): number | null {
   let normalizedFileExtension = fileExtension
   if (fileExtension && !fileExtension.startsWith('.')) {
     normalizedFileExtension = '.' + fileExtension
@@ -168,16 +254,22 @@ function extractTrailingNumber (fileName, fileExtension) {
   if (extLength > 0 && !fileName.endsWith(normalizedFileExtension)) {
     return null
   }
-  const fileNameWithoutExtension = fileName.slice(0, fileName.length - extLength)
+  const fileNameWithoutExtension = fileName.slice(
+    0,
+    fileName.length - extLength
+  )
   const match = fileNameWithoutExtension.match(/(\d+)$/)
   return match ? +match[1] : null
 }
 
-function extractFileName (fileName) {
-  return fileName.split(/(\\|\/)/g).pop()
+export function extractFileName (fileName: string): string {
+  return fileName.split(/(\\|\/)/g).pop()!
 }
 
-async function isMatchingTime (filePath, time) {
+async function isMatchingTime (
+  filePath: string,
+  time: number
+): Promise<boolean> {
   const { birthtimeMs } = await stat(filePath)
   return birthtimeMs >= time
 }
@@ -186,7 +278,11 @@ async function isMatchingTime (filePath, time) {
  * Retry unlink operation for Windows compatibility
  * Windows can fail to delete files if they're still being accessed
  */
-async function unlinkWithRetry (filePath, maxRetries = 50, retryDelay = 100) {
+async function unlinkWithRetry (
+  filePath: string,
+  maxRetries = 50,
+  retryDelay = 100
+): Promise<void> {
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {
       await unlink(filePath)
@@ -202,19 +298,37 @@ async function unlinkWithRetry (filePath, maxRetries = 50, retryDelay = 100) {
   }
 }
 
-async function removeOldFiles ({ count, removeOtherLogFiles, baseFile, dateFormat, extension, createdFileNames, newFileName }) {
+export async function removeOldFiles ({
+  count,
+  removeOtherLogFiles,
+  baseFile,
+  dateFormat,
+  extension,
+  createdFileNames,
+  newFileName,
+}: RemoveOldFilesOptions): Promise<void> {
   if (!removeOtherLogFiles) {
     createdFileNames.push(newFileName)
     if (createdFileNames.length > count) {
-      const filesToRemove = createdFileNames.splice(0, createdFileNames.length - 1 - count)
-      await Promise.allSettled(filesToRemove.map(file => unlinkWithRetry(file)))
+      const filesToRemove = createdFileNames.splice(
+        0,
+        createdFileNames.length - 1 - count
+      )
+      await Promise.allSettled(
+        filesToRemove.map((file) => unlinkWithRetry(file))
+      )
     }
   } else {
-    let files = []
+    let files: LogFileInfo[] = []
     const pathSegments = getFileName(baseFile).split(/(\\|\/)/g)
-    const baseFileNameStr = pathSegments.pop()
+    const baseFileNameStr = pathSegments.pop()!
     for (const fileEntry of await readdir(join(...pathSegments))) {
-      const f = identifyLogFile(fileEntry, baseFileNameStr, dateFormat, extension)
+      const f = identifyLogFile(
+        fileEntry,
+        baseFileNameStr,
+        dateFormat,
+        extension
+      )
       if (f) {
         files.push(f)
       }
@@ -228,14 +342,22 @@ async function removeOldFiles ({ count, removeOtherLogFiles, baseFile, dateForma
     if (files.length > count) {
       const filesToRemove = files.slice(0, files.length - count)
       await Promise.allSettled(
-        filesToRemove.map(file => unlinkWithRetry(join(...pathSegments, file.fileName)))
+        filesToRemove.map((file) =>
+          unlinkWithRetry(join(...pathSegments, file.fileName))
+        )
       )
     }
   }
 }
 
-async function checkSymlink (fileName, linkPath) {
-  const stats = await lstat(linkPath).then(stats => stats, () => null)
+export async function checkSymlink (
+  fileName: string,
+  linkPath: string
+): Promise<boolean> {
+  const stats = await lstat(linkPath).then(
+    (stats) => stats,
+    () => null
+  )
   if (stats?.isSymbolicLink()) {
     const existingTarget = await readlink(linkPath)
     if (extractFileName(existingTarget) === extractFileName(fileName)) {
@@ -246,7 +368,7 @@ async function checkSymlink (fileName, linkPath) {
   return true
 }
 
-async function createSymlink (fileVal) {
+export async function createSymlink (fileVal: string): Promise<boolean> {
   const linkPath = join(dirname(fileVal), 'current.log')
   const shouldCreateSymlink = await checkSymlink(fileVal, linkPath)
   if (shouldCreateSymlink) {
@@ -255,7 +377,7 @@ async function createSymlink (fileVal) {
   return false
 }
 
-function checkSymlinkSync (fileName, linkPath) {
+function checkSymlinkSync (fileName: string, linkPath: string): boolean {
   try {
     const stats = lstatSync(linkPath)
     if (stats.isSymbolicLink()) {
@@ -266,7 +388,7 @@ function checkSymlinkSync (fileName, linkPath) {
       unlinkSync(linkPath)
     }
     return true
-  } catch (error) {
+  } catch (error: any) {
     if (error.code === 'ENOENT') {
       return true
     }
@@ -274,7 +396,7 @@ function checkSymlinkSync (fileName, linkPath) {
   }
 }
 
-function createSymlinkSync (fileVal) {
+export function createSymlinkSync (fileVal: string): boolean {
   const linkPath = join(dirname(fileVal), 'current.log')
   const shouldCreateSymlink = checkSymlinkSync(fileVal, linkPath)
   if (shouldCreateSymlink) {
@@ -283,26 +405,36 @@ function createSymlinkSync (fileVal) {
   return false
 }
 
-function validateDateFormat (formatStr) {
+export function validateDateFormat (formatStr?: string): boolean {
   const invalidChars = /[/\\?%*:|"<>]/g
-  if (invalidChars.test(formatStr)) {
+  if (formatStr && invalidChars.test(formatStr)) {
     throw new Error(`${formatStr} contains invalid characters`)
   }
   return true
 }
 
-function parseDate (formatStr, frequencySpec, parseStart = false) {
+export function parseDate (
+  formatStr?: string | null,
+  frequencySpec?: FrequencySpec | null,
+  parseStart = false
+): string | null {
   if (!(formatStr && frequencySpec?.start && frequencySpec.next)) return null
 
   try {
-    return format(parseStart ? frequencySpec.start : frequencySpec.next, formatStr)
+    return format(
+      parseStart ? frequencySpec.start : frequencySpec.next,
+      formatStr
+    )
   } catch (error) {
     throw new Error(`${formatStr} must be a valid date format`)
   }
 }
 
 // to implement the default file fallback feature
-function sanitizeFile (file, extension) {
+export function sanitizeFile (
+  file: string | (() => string),
+  extension?: string
+): SanitizedFile {
   if (typeof file === 'function') {
     file = file()
   }
@@ -323,7 +455,7 @@ function sanitizeFile (file, extension) {
   let currentFileExtension = ''
   if (currentFileName.includes('.')) {
     const fileParts = file.split('.')
-    currentFileExtension = fileParts.pop()
+    currentFileExtension = fileParts.pop()!
     file = fileParts.join('.')
   }
 
@@ -332,11 +464,11 @@ function sanitizeFile (file, extension) {
   } else if (!extension && currentFileExtension.length > 1) {
     extension = currentFileExtension
   }
-  return { file, extension }
+  return { file, extension: extension! }
 }
 
 // to validate and reject characters that are not allowed in file paths (cross-platform safe set, based on Windows restrictions)
-function validateFileName (filepath) {
+export function validateFileName (filepath: string | (() => string)): boolean {
   if (typeof filepath === 'function') {
     filepath = filepath()
   }
@@ -369,25 +501,4 @@ function validateFileName (filepath) {
     throw new Error(`File name contains invalid characters: ${filepath}`)
   }
   return true
-}
-
-module.exports = {
-  buildFileName,
-  identifyLogFile,
-  removeOldFiles,
-  checkSymlink,
-  createSymlink,
-  createSymlinkSync,
-  detectLastNumber,
-  extractFileName,
-  parseFrequency,
-  getNext,
-  parseSize,
-  getFileName,
-  getFileSize,
-  validateLimitOptions,
-  parseDate,
-  validateDateFormat,
-  sanitizeFile,
-  validateFileName
 }
