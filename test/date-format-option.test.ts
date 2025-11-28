@@ -1,21 +1,19 @@
-'use strict'
+import { once } from 'node:events'
+import { stat, readFile } from 'node:fs/promises'
+import { join } from 'node:path'
+import { it, beforeEach } from 'node:test'
+import assert from 'node:assert'
+import { format, startOfHour } from 'date-fns'
 
-const { once } = require('events')
-const { stat, readFile } = require('fs/promises')
-const { join } = require('path')
-const { it, beforeEach } = require('node:test')
-const assert = require('node:assert')
-const { format } = require('date-fns')
-
-const {
+import {
   buildStream,
   createTempTestDir,
   sleep,
   waitForFile,
-  waitForCondition
-} = require('./utils')
+  waitForCondition,
+} from './utils.ts'
 
-let logFolder
+let logFolder: string
 
 beforeEach(() => {
   logFolder = createTempTestDir()
@@ -23,7 +21,11 @@ beforeEach(() => {
 
 it('rotate file with date format based on frequency', async () => {
   const file = join(logFolder, 'log')
-  const stream = await buildStream({ frequency: 'hourly', file, dateFormat: 'yyyy-MM-dd-hh' })
+  const stream = await buildStream({
+    frequency: 'hourly',
+    file,
+    dateFormat: 'yyyy-MM-dd-hh',
+  })
   stream.write('logged message #1\n')
   stream.write('logged message #2\n')
   stream.end()
@@ -38,7 +40,9 @@ it('rotate file with date format based on frequency', async () => {
 
 it('rotate file based on custom time and date format', async () => {
   const file = join(logFolder, 'log')
-  console.log(`[DEBUG] Test starting, platform: ${process.platform}, CI: ${process.env.CI}, folder: ${logFolder}`)
+  console.log(
+    `[DEBUG] Test starting, platform: ${process.platform}, CI: ${process.env.CI}, folder: ${logFolder}`
+  )
 
   // Synchronize to rotation boundary like the original tap version
   const now = Date.now()
@@ -49,9 +53,15 @@ it('rotate file based on custom time and date format', async () => {
   // Calculate filename AFTER synchronization, using the same format as the original test
   const currentDate = new Date()
   const fileName = `${file}.${format(currentDate, 'yyyy-MM-dd-hh')}`
-  console.log(`[DEBUG] Filename pattern: ${fileName}, date: ${currentDate.toISOString()}`)
+  console.log(
+    `[DEBUG] Filename pattern: ${fileName}, date: ${currentDate.toISOString()}`
+  )
 
-  const stream = await buildStream({ frequency: 100, file, dateFormat: 'yyyy-MM-dd-hh' })
+  const stream = await buildStream({
+    frequency: 100,
+    file,
+    dateFormat: 'yyyy-MM-dd-hh',
+  })
   console.log('[DEBUG] Stream created with frequency: 100ms')
 
   console.log('[DEBUG] Writing messages #1 and #2')
@@ -95,11 +105,19 @@ it('rotate file based on custom time and date format', async () => {
   await sleep(50) // Small buffer for file system flush on slower platforms
 
   // Read all files to understand where messages ended up
-  const files = []
+  interface FileContent {
+    num: number;
+    content: string;
+  }
+  const files: FileContent[] = []
   for (let i = 1; i <= 3; i++) {
     try {
       const content = await readFile(`${fileName}.${i}.log`, 'utf8')
-      console.log(`[DEBUG] File ${i} content (${content.length} bytes): "${content.replace(/\n/g, '\\n')}"`)
+      console.log(
+        `[DEBUG] File ${i} content (${
+          content.length
+        } bytes): "${content.replace(/\n/g, '\\n')}"`
+      )
       files.push({ num: i, content })
     } catch (error) {
       console.log(`[DEBUG] File ${i} does not exist`)
@@ -107,38 +125,55 @@ it('rotate file based on custom time and date format', async () => {
   }
 
   // Check that all messages are present somewhere
-  const allContent = files.map(f => f.content).join('\n')
+  const allContent = files.map((f) => f.content).join('\n')
   assert.ok(allContent.includes('#1'), 'message #1 should be logged')
   assert.ok(allContent.includes('#2'), 'message #2 should be logged')
   assert.ok(allContent.includes('#3'), 'message #3 should be logged')
   assert.ok(allContent.includes('#4'), 'message #4 should be logged')
 
   // Verify rotation happened (at least 2 files should exist)
-  assert.ok(files.length >= 2, 'at least 2 files should be created due to rotation')
+  assert.ok(
+    files.length >= 2,
+    'at least 2 files should be created due to rotation'
+  )
 
   // Due to timing variations, messages might be in different files
   // Just verify that early messages are in earlier-numbered files (flexible assertion)
   let foundEarlyMessages = false
-  for (const file of files.slice(0, 2)) { // Check first 2 files
+  for (const file of files.slice(0, 2)) {
+    // Check first 2 files
     if (file.content.includes('#1') || file.content.includes('#2')) {
       foundEarlyMessages = true
       break
     }
   }
-  assert.ok(foundEarlyMessages, 'early messages (#1 or #2) should be in one of the first files')
+  assert.ok(
+    foundEarlyMessages,
+    'early messages (#1 or #2) should be in one of the first files'
+  )
 
   console.log('[DEBUG] Checking that no more than 4 files exist')
   // With universal flush delays, sometimes a 4th file gets created, which is acceptable
-  await assert.rejects(stat(`${fileName}.5.log`), 'no more than 4 files created')
+  await assert.rejects(
+    stat(`${fileName}.5.log`),
+    'no more than 4 files created'
+  )
   console.log('[DEBUG] Test completed successfully')
 })
 
 it('rotate file based on size and date format', async () => {
   const file = join(logFolder, 'log')
-  const { startOfHour } = require('date-fns')
-  const fileWithDate = `${file}.${format(startOfHour(new Date()), 'yyyy-MM-dd-hh')}`
+  const fileWithDate = `${file}.${format(
+    startOfHour(new Date()),
+    'yyyy-MM-dd-hh'
+  )}`
   const size = 20
-  const stream = await buildStream({ frequency: 'hourly', size: `${size}b`, file, dateFormat: 'yyyy-MM-dd-hh' })
+  const stream = await buildStream({
+    frequency: 'hourly',
+    size: `${size}b`,
+    file,
+    dateFormat: 'yyyy-MM-dd-hh',
+  })
   stream.write('logged message #1\n')
   stream.write('logged message #2\n')
   await once(stream, 'ready')
@@ -157,10 +192,17 @@ it('rotate file based on size and date format', async () => {
 
 it('rotate file based on size and date format with custom frequency', async () => {
   const file = join(logFolder, 'log')
-  const { startOfHour } = require('date-fns')
-  const fileWithDate = `${file}.${format(startOfHour(new Date()).getTime(), 'yyyy-MM-dd-hh')}`
+  const fileWithDate = `${file}.${format(
+    startOfHour(new Date()).getTime(),
+    'yyyy-MM-dd-hh'
+  )}`
   const size = 20
-  const stream = await buildStream({ frequency: 1000, size: `${size}b`, file, dateFormat: 'yyyy-MM-dd-hh' })
+  const stream = await buildStream({
+    frequency: 1000,
+    size: `${size}b`,
+    file,
+    dateFormat: 'yyyy-MM-dd-hh',
+  })
   stream.write('logged message #1\n')
   stream.write('logged message #2\n')
   await once(stream, 'ready')
@@ -188,7 +230,11 @@ it('rotate file based on size and date format with custom frequency', async () =
         return false
       }
     },
-    { timeout: 10000, interval: 200, description: 'files to exist with correct sizes' }
+    {
+      timeout: 10000,
+      interval: 200,
+      description: 'files to exist with correct sizes',
+    }
   )
 
   // Verify file sizes one more time for the assertion
@@ -215,16 +261,27 @@ it('rotate file based on size and date format with custom frequency', async () =
       }
       return false
     },
-    { timeout: 10000, interval: 200, description: 'Message #4 to be found in one of the rotated files' }
+    {
+      timeout: 10000,
+      interval: 200,
+      description: 'Message #4 to be found in one of the rotated files',
+    }
   )
   // On slower platforms, timing variations can cause up to 5 files
-  await assert.rejects(stat(`${fileWithDate}.6.log`), 'no more than 5 files created')
+  await assert.rejects(
+    stat(`${fileWithDate}.6.log`),
+    'no more than 5 files created'
+  )
 })
 
 it('rotate file based on size and date format without frequency', async () => {
   const file = join(logFolder, 'log')
   const size = 20
-  const stream = await buildStream({ size: `${size}b`, file, dateFormat: 'yyyy-MM-dd-hh' })
+  const stream = await buildStream({
+    size: `${size}b`,
+    file,
+    dateFormat: 'yyyy-MM-dd-hh',
+  })
   stream.write('logged message #1\n')
   stream.write('logged message #2\n')
   await once(stream, 'ready')
@@ -245,7 +302,7 @@ it('throw on invalid date format', async () => {
   await assert.rejects(
     buildStream({ file: join(logFolder, 'log'), dateFormat: 'yyyy%MM%dd' }),
     {
-      message: 'yyyy%MM%dd contains invalid characters'
+      message: 'yyyy%MM%dd contains invalid characters',
     },
     'throws on invalid date format'
   )
