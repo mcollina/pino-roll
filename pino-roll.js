@@ -32,6 +32,7 @@ const {
  * Number will be appended to this file name.
  * When the parent folder already contains numbered files, numbering will continue based on the highest number.
  * If this path does not exist, the logger with throw an error unless you set `mkdir` to `true`.
+ * Note: when used through `pino.transport()`, `file` must be a string because worker options are structured-cloned.
  *
  * @property {string|number} size? - When specified, the maximum size of a given log file.
  * Can be combined with frequency.
