@@ -43,7 +43,50 @@ const transport = pino.transport({
 })
 ```
 
-If you need a `file` function, build `pino-roll` directly in-process (without `pino.transport()`).
+If you do not need `pino.transport()`, you can also call `pino-roll` directly in-process and pass `file` as a function.
+
+If you need to keep using `pino.transport()` and still compute the final path dynamically, create a custom transport module that calls `pino-roll` in the worker thread.
+
+```js
+// my-pino-roll-transport.js
+'use strict'
+
+const { join } = require('path')
+const buildPinoRoll = require('pino-roll')
+
+module.exports = async function myPinoRollTransport ({
+  folder,
+  prefix = 'app',
+  ...rollOptions
+} = {}) {
+  const dateStamp = new Date().toISOString().slice(0, 10)
+  const file = join(folder, `${prefix}-${dateStamp}`)
+  return buildPinoRoll({ ...rollOptions, file })
+}
+```
+
+```js
+// app.js
+const { join } = require('path')
+const pino = require('pino')
+
+const transport = pino.transport({
+  target: join(__dirname, 'my-pino-roll-transport.js'),
+  options: {
+    folder: join(__dirname, 'logs'),
+    prefix: 'server',
+    frequency: 'daily',
+    mkdir: true
+  }
+})
+
+const logger = pino(transport)
+logger.info('hello from custom transport')
+```
+
+A runnable version of this pattern is available in:
+- `examples/custom-transport/pino-roll-dynamic-transport.js`
+- `examples/custom-transport/app.js`
 
 ## API
 
