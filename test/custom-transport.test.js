@@ -52,7 +52,14 @@ it('supports dynamic filenames via a custom transport wrapper', async () => {
   } finally {
     if (!transport.closed) {
       transport.end()
-      await once(transport, 'close')
+      await waitForCondition(
+        async () => transport.closed,
+        {
+          timeout: 3000,
+          interval: 25,
+          description: 'custom transport to close'
+        }
+      )
     }
   }
 })
