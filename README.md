@@ -24,6 +24,69 @@ const logger = pino(transport)
 
 (Also works in CommonJS)
 
+### Important note about `file` functions
+
+`pino.transport()` sends `options` to a worker thread using the structured clone algorithm.
+Functions are not cloneable, so `file: () => '...'` will throw `DataCloneError` when used this way.
+
+If you need dynamic filenames with `pino.transport()`, use `dateFormat` + `frequency`.
+
+```js
+const transport = pino.transport({
+  target: 'pino-roll',
+  options: {
+    file: 'log-files/file',
+    frequency: 'daily',
+    dateFormat: 'yyyy.MM.dd',
+    mkdir: true
+  }
+})
+```
+
+If you do not need `pino.transport()`, you can also call `pino-roll` directly in-process and pass `file` as a function.
+
+If you need to keep using `pino.transport()` and still compute the final path dynamically, create a custom transport module that calls `pino-roll` in the worker thread.
+
+```js
+// my-pino-roll-transport.js
+'use strict'
+
+const { join } = require('path')
+const buildPinoRoll = require('pino-roll')
+
+module.exports = async function myPinoRollTransport ({
+  folder,
+  prefix = 'app',
+  ...rollOptions
+} = {}) {
+  const dateStamp = new Date().toISOString().slice(0, 10)
+  const file = join(folder, `${prefix}-${dateStamp}`)
+  return buildPinoRoll({ ...rollOptions, file })
+}
+```
+
+```js
+// app.js
+const { join } = require('path')
+const pino = require('pino')
+
+const transport = pino.transport({
+  target: join(__dirname, 'my-pino-roll-transport.js'),
+  options: {
+    folder: join(__dirname, 'logs'),
+    prefix: 'server',
+    frequency: 'daily',
+    mkdir: true
+  }
+})
+
+const logger = pino(transport)
+logger.info('hello from custom transport')
+```
+
+A runnable version of this pattern is available in:
+- `examples/custom-transport/pino-roll-dynamic-transport.js`
+- `examples/custom-transport/app.js`
 
 ## API
 
@@ -43,7 +106,7 @@ You can specify any of [Sonic-Boom options](https://github.com/pinojs/sonic-boom
   - A rotation number will be appended to this filename.
   - When the parent folder already contains numbered files, numbering will continue based on the highest number.
   - If this path does not exist, the logger will throw an error unless you set `mkdir` to `true`.
-  - `file` may also be a function that returns a string.
+  - `file` may be a function only when you build `pino-roll` directly in-process. It is not supported in `pino.transport()` options.
 
   - To ensure consistency, rotated filenames now always follow the **Extension Last Format** convention:
     ```
