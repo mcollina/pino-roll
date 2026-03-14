@@ -143,10 +143,11 @@ You can specify any of [Sonic-Boom options](https://github.com/pinojs/sonic-boom
   - The amount of time a given log file is used.
   - Can be combined with size.
   - Accepted values:
+    - `weekly` -> rotates the file once per week (every Monday at midnight).
     - `daily` -> rotates the file once per day.
     - `hourly` -> rotates the file once per hour.
     - Number -> interpreted as milliseconds.
-  - When using `daily` or `hourly`, any existing file for the current period will be reused.
+  - When using `weekly`, `daily` or `hourly`, any existing file for the current period will be reused.
   - When using a *numeric value*, rotation happens at the start/end of each specified interval.
 
 * **`extension?`**: `string`
@@ -177,6 +178,7 @@ You can specify any of [Sonic-Boom options](https://github.com/pinojs/sonic-boom
   - In order for the date/time to be appended to the log file, the **`frequency`** option should be set.
   - Supports date formats from `date-fns` (see: [date-fns format documentation](https://date-fns.org/v4.1.0/docs/format)).
   - For example:
+    - Weekly: `'yyyy-MM-dd'` -> `error.2024-09-23.log` (Monday of that week)
     - Daily: `'yyyy-MM-dd'` -> `error.2024-09-24.log`
     - Hourly: `'yyyy-MM-dd-hh'` -> `error.2024-09-24-05.log`
 
