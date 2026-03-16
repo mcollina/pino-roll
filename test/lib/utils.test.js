@@ -56,6 +56,15 @@ it('parseFrequency()', async () => {
     { frequency: 'hourly', start: startOfHour(today).getTime(), next: startOfHour(addHours(today, 1)).getTime() },
     'supports hourly frequency'
   )
+  const monday = new Date(today)
+  monday.setDate(today.getDate() - ((today.getDay() + 6) % 7))
+  const weekStart = new Date(monday).setHours(0, 0, 0, 0)
+  const nextMonday = addDays(new Date(weekStart), 7).setHours(0, 0, 0, 0)
+  assert.deepStrictEqual(
+    parseFrequency('weekly'),
+    { frequency: 'weekly', start: weekStart, next: nextMonday },
+    'supports weekly frequency'
+  )
   const custom = 3000
   const start = today.getTime() - today.getTime() % custom
   const next = start + custom
@@ -72,6 +81,12 @@ it('getNext()', async () => {
 
   assert.deepStrictEqual(getNext('daily'), startOfDay(addDays(today, 1)).getTime(), 'supports daily frequency')
   assert.deepStrictEqual(getNext('hourly'), startOfHour(addHours(today, 1)).getTime(), 'supports hourly frequency')
+
+  const monday2 = new Date(today)
+  monday2.setDate(today.getDate() - ((today.getDay() + 6) % 7))
+  const nextMon = addDays(new Date(new Date(monday2).setHours(0, 0, 0, 0)), 7).setHours(0, 0, 0, 0)
+  assert.deepStrictEqual(getNext('weekly'), nextMon, 'supports weekly frequency')
+
   const custom = 3000
   const time = Date.now()
   const next = time - time % custom + custom
@@ -101,6 +116,12 @@ it('getNext() on dates transitioning from DST to Standard Time', async () => {
 
     assert.deepStrictEqual(getNext('daily'), startOfDay(addDays(today, 1)).getTime(), 'supports daily frequency')
     assert.deepStrictEqual(getNext('hourly'), startOfHour(addHours(today, 1)).getTime(), 'supports hourly frequency')
+
+    const dstMonday = new Date(today)
+    dstMonday.setDate(today.getDate() - ((today.getDay() + 6) % 7))
+    const dstNextMon = addDays(new Date(new Date(dstMonday).setHours(0, 0, 0, 0)), 7).setHours(0, 0, 0, 0)
+    assert.deepStrictEqual(getNext('weekly'), dstNextMon, 'supports weekly frequency')
+
     const custom = 3000
     assert.deepStrictEqual(getNext(custom), Date.now() + custom, 'supports custom frequency and does not return start')
     MockDate.reset()
@@ -131,6 +152,12 @@ it('getNext() on dates transitioning from Standard Time to DST', async () => {
 
     assert.deepStrictEqual(getNext('daily'), startOfDay(addDays(today, 1)).getTime(), 'supports daily frequency')
     assert.deepStrictEqual(getNext('hourly'), startOfHour(addHours(today, 1)).getTime(), 'supports hourly frequency')
+
+    const dstMonday = new Date(today)
+    dstMonday.setDate(today.getDate() - ((today.getDay() + 6) % 7))
+    const dstNextMon = addDays(new Date(new Date(dstMonday).setHours(0, 0, 0, 0)), 7).setHours(0, 0, 0, 0)
+    assert.deepStrictEqual(getNext('weekly'), dstNextMon, 'supports weekly frequency')
+
     const custom = 3000
     assert.deepStrictEqual(getNext(custom), Date.now() + custom, 'supports custom frequency and does not return start')
     MockDate.reset()
