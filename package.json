@@ -25,7 +25,8 @@
   "license": "MIT",
   "dependencies": {
     "date-fns": "^4.1.0",
-    "sonic-boom": "^4.0.1"
+    "sonic-boom": "^4.0.1",
+    "temporal-polyfill": "^0.3.2"
   },
   "devDependencies": {
     "@fastify/pre-commit": "^2.2.0",

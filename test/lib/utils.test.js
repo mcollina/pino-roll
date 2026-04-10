@@ -100,27 +100,28 @@ it('getNext() on dates transitioning from DST to Standard Time', async () => {
   // test two different timezones
   const data = [
     {
-      tz: 'Europe/Berlin',
-      mockDate: '27 Oct 2024 00:00:00 GMT+0100'
+      tz: 'Europe/Berlin', // +01:00 normally
+      mockDate: 1729980000000, // 2024-10-27T00:00:00
+      hourly: 1729983600000, // 2024-10-27T01:00:00
+      daily: 1730070000000, // 2024-10-28T00:00:00
+      weekly: 1730070000000 // 2024-10-28T00:00:00
     },
     {
       tz: 'America/New_York',
-      mockDate: '03 Nov 2024 00:00:00 GMT-0500'
+      mockDate: 1730610000000, // '03 Nov 2024 00:00:00 GMT-0500',
+      hourly: 1730613600000, //'2024-11-03T01:00:00-05:00',
+      daily: 1730696400000, //'2024-11-04T00:00:00-05:00',
+      weekly: 1730696400000 //'2024-11-04T00:00:00-05:00'
     }
   ]
 
   for (const d of data) {
     MockDate.set(d.mockDate)
     process.env.TZ = d.tz
-    const today = new Date()
 
-    assert.deepStrictEqual(getNext('daily'), startOfDay(addDays(today, 1)).getTime(), 'supports daily frequency')
-    assert.deepStrictEqual(getNext('hourly'), startOfHour(addHours(today, 1)).getTime(), 'supports hourly frequency')
-
-    const dstMonday = new Date(today)
-    dstMonday.setDate(today.getDate() - ((today.getDay() + 6) % 7))
-    const dstNextMon = addDays(new Date(new Date(dstMonday).setHours(0, 0, 0, 0)), 7).setHours(0, 0, 0, 0)
-    assert.deepStrictEqual(getNext('weekly'), dstNextMon, 'supports weekly frequency')
+    assert.deepStrictEqual(getNext('daily', d.tz), d.daily, 'supports daily frequency')
+    assert.deepStrictEqual(getNext('hourly', d.tz), d.hourly, 'supports hourly frequency')
+    assert.deepStrictEqual(getNext('weekly', d.tz), d.weekly, 'supports weekly frequency')
 
     const custom = 3000
     assert.deepStrictEqual(getNext(custom), Date.now() + custom, 'supports custom frequency and does not return start')
@@ -137,26 +138,27 @@ it('getNext() on dates transitioning from Standard Time to DST', async () => {
   const data = [
     {
       tz: 'Europe/Berlin',
-      mockDate: '31 March 2024 01:00:00 GMT+0100'
+      mockDate: 1711843200000, // 2024-03-31T01:00:00+01:00
+      hourly: 1711846800000,  // 2024-03-31T02:00:00+01:00
+      daily: 1711922400000, // 2024-04-01T00:00:00+01:00
+      weekly: 1711922400000 // 2024-04-01T00:00:00+01:00
     },
     {
       tz: 'America/New_York',
-      mockDate: '10 Nov 2024 01:00:00 GMT-0500'
+      mockDate: 1731218400000, // 2024-11-10T01:00:00-05:00
+      hourly: 1731222000000, // 2024-11-10T02:00:00-05:00
+      daily: 1731301200000, // 2024-11-11T00:00:00-05:00
+      weekly: 1731301200000 // 2024-11-11T00:00:00-05:00
     }
   ]
 
   for (const d of data) {
     MockDate.set(d.mockDate)
     process.env.TZ = d.tz
-    const today = new Date()
 
-    assert.deepStrictEqual(getNext('daily'), startOfDay(addDays(today, 1)).getTime(), 'supports daily frequency')
-    assert.deepStrictEqual(getNext('hourly'), startOfHour(addHours(today, 1)).getTime(), 'supports hourly frequency')
-
-    const dstMonday = new Date(today)
-    dstMonday.setDate(today.getDate() - ((today.getDay() + 6) % 7))
-    const dstNextMon = addDays(new Date(new Date(dstMonday).setHours(0, 0, 0, 0)), 7).setHours(0, 0, 0, 0)
-    assert.deepStrictEqual(getNext('weekly'), dstNextMon, 'supports weekly frequency')
+    assert.deepStrictEqual(getNext('daily', d.tz), d.daily, 'supports daily frequency')
+    assert.deepStrictEqual(getNext('hourly', d.tz), d.hourly, 'supports hourly frequency')
+    assert.deepStrictEqual(getNext('weekly', d.tz), d.weekly, 'supports weekly frequency')
 
     const custom = 3000
     assert.deepStrictEqual(getNext(custom), Date.now() + custom, 'supports custom frequency and does not return start')
