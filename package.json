@@ -26,13 +26,13 @@
   "dependencies": {
     "date-fns": "^4.1.0",
     "sonic-boom": "^4.0.1",
-    "temporal-polyfill": "^0.3.2"
+    "temporal-fmt": "^0.3.2",
+    "temporal-polyfill": "^1.0.3"
   },
   "devDependencies": {
     "@fastify/pre-commit": "^2.2.0",
     "c8": "^10.1.3",
     "eslint": "^9.33.0",
-    "mockdate": "^3.0.5",
     "neostandard": "^0.12.2",
     "pino": "^10.0.0"
   },
