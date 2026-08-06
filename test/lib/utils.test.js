@@ -1,11 +1,11 @@
 'use strict'
 
-const { addDays, addHours, startOfDay, startOfHour } = require('date-fns')
 const { writeFile, rm, stat, readlink, symlink } = require('fs/promises')
 const { join } = require('path')
 const { describe, it, beforeEach } = require('node:test')
 const assert = require('node:assert')
-const { format } = require('date-fns')
+const { format } = require('temporal-fmt')
+const { Temporal } = require('temporal-polyfill')
 
 const {
   buildFileName,
@@ -42,30 +42,28 @@ it('parseSize()', async () => {
 })
 
 it('parseFrequency()', async () => {
-  const today = new Date()
+  const today = Temporal.Now.zonedDateTimeISO()
 
   assert.deepStrictEqual(parseFrequency(), null, 'returns null on empty input')
   assert.deepStrictEqual(
     parseFrequency('daily'),
-    { frequency: 'daily', start: startOfDay(today).getTime(), next: startOfDay(addDays(today, 1)).getTime() },
+    { frequency: 'daily', start: today.startOfDay().epochMilliseconds, next: today.add({ days: 1 }).startOfDay().epochMilliseconds },
     'supports daily frequency'
   )
   assert.deepStrictEqual(
     parseFrequency('hourly'),
-    { frequency: 'hourly', start: startOfHour(today).getTime(), next: startOfHour(addHours(today, 1)).getTime() },
+    { frequency: 'hourly', start: today.with({ minute: 0, second: 0, millisecond: 0 }).epochMilliseconds, next: today.add({ hours: 1 }).with({ minute: 0, second: 0, millisecond: 0 }).epochMilliseconds },
     'supports hourly frequency'
   )
-  const monday = new Date(today)
-  monday.setDate(today.getDate() - ((today.getDay() + 6) % 7))
-  const weekStart = new Date(monday).setHours(0, 0, 0, 0)
-  const nextMonday = addDays(new Date(weekStart), 7).setHours(0, 0, 0, 0)
+  const mondayStart = today.subtract({ days: today.dayOfWeek - 1 }).startOfDay()
+  const nextMonday = today.add({ days: ((7 - today.dayOfWeek) % 7) + 1 }).startOfDay()
   assert.deepStrictEqual(
     parseFrequency('weekly'),
-    { frequency: 'weekly', start: weekStart, next: nextMonday },
+    { frequency: 'weekly', start: mondayStart.epochMilliseconds, next: nextMonday.epochMilliseconds },
     'supports weekly frequency'
   )
   const custom = 3000
-  const start = today.getTime() - today.getTime() % custom
+  const start = today.epochMilliseconds - today.epochMilliseconds % custom
   const next = start + custom
   assert.deepStrictEqual(
     parseFrequency(custom),
@@ -76,15 +74,13 @@ it('parseFrequency()', async () => {
 })
 
 it('getNext()', async () => {
-  const today = new Date()
+  const today = Temporal.Now.zonedDateTimeISO()
 
-  assert.deepStrictEqual(getNext('daily'), startOfDay(addDays(today, 1)).getTime(), 'supports daily frequency')
-  assert.deepStrictEqual(getNext('hourly'), startOfHour(addHours(today, 1)).getTime(), 'supports hourly frequency')
+  assert.deepStrictEqual(getNext('daily'), today.startOfDay().add({ days: 1 }).epochMilliseconds, 'supports daily frequency')
+  assert.deepStrictEqual(getNext('hourly'), Temporal.Now.zonedDateTimeISO().with({ minute: 0, second: 0, millisecond: 0 }).add({ hours: 1 }).epochMilliseconds, 'supports hourly frequency')
 
-  const monday2 = new Date(today)
-  monday2.setDate(today.getDate() - ((today.getDay() + 6) % 7))
-  const nextMon = addDays(new Date(new Date(monday2).setHours(0, 0, 0, 0)), 7).setHours(0, 0, 0, 0)
-  assert.deepStrictEqual(getNext('weekly'), nextMon, 'supports weekly frequency')
+  const nextMon = Temporal.Now.zonedDateTimeISO().add({ days: ((7 - today.dayOfWeek) % 7) + 1 })
+  assert.deepStrictEqual(getNext('weekly'), nextMon.startOfDay().epochMilliseconds, 'supports weekly frequency')
 
   const custom = 3000
   const time = Date.now()
@@ -181,14 +177,13 @@ it('identifyLogFiles()', async () => {
   b = buildFileName('my-file', '2024-09-26')
   assert.strictEqual(b, identifyLogFile(b, 'my-file', 'yyyy-MM-dd').fileName, 'number(start)+date')
   b = buildFileName('my-file', '2024-09-26-07')
-  assert.strictEqual(b, identifyLogFile(b, 'my-file', 'yyyy-MM-dd-hh').fileName, 'number(start)+date (hourly)')
+  assert.strictEqual(b, identifyLogFile(b, 'my-file', 'yyyy-MM-dd-HH').fileName, 'number(start)+date (hourly)')
   b = buildFileName('my-file', '2024-09-26', 5)
   assert.strictEqual(b, identifyLogFile(b, 'my-file', 'yyyy-MM-dd').fileName, 'number+date')
   b = buildFileName('my-file', '2024-09-26', 5, ext)
   assert.strictEqual(b, identifyLogFile(b, 'my-file', 'yyyy-MM-dd', ext).fileName, 'number+date+extension')
   b = buildFileName('my-file', '2024-09-26', 5, '.json')
   assert.strictEqual(b, identifyLogFile(b, 'my-file', 'yyyy-MM-dd', '.json').fileName, 'number+date+extension(with dot suffix)')
-  b = buildFileName('my-file', '2024-09-31', '5a', ext)
   b = buildFileName('my-file', '2024-09-31', 5, ext)
   assert.ok(!identifyLogFile(b, 'my-file', 'yyyy-MM-dd', ext).fileName, 'number+invalid date+extension')
   b = buildFileName('my-file', '2024-09-26', 5, 'notMyExtension')
@@ -207,11 +202,11 @@ it('validateDateFormat()', async () => {
 })
 
 it('parseDate()', async () => {
-  const today = new Date()
-  const frequencySpec = { frequency: 'hourly', start: startOfHour(today).getTime(), next: startOfHour(addHours(today, 1)).getTime() }
+  const today = Temporal.Now.zonedDateTimeISO()
+  const frequencySpec = { frequency: 'hourly', start: today.with({ minute: 0, second: 0, millisecond: 0 }).epochMilliseconds, next: today.with({ minute: 0, second: 0, millisecond: 0 }).add({ hours: 1 }).epochMilliseconds }
   assert.strictEqual(parseDate(null, frequencySpec), null, 'returns null on empty format')
-  assert.strictEqual(parseDate('yyyy-MM-dd-hh', frequencySpec, true), format(frequencySpec.start, 'yyyy-MM-dd-hh'), 'parse start date time')
-  assert.strictEqual(parseDate('yyyy-MM-dd-hh', frequencySpec), format(frequencySpec.next, 'yyyy-MM-dd-hh'), 'parse next date time')
+  assert.strictEqual(parseDate('yyyy-MM-dd-HH', frequencySpec, true), format(Temporal.Instant.fromEpochMilliseconds(frequencySpec.start).toZonedDateTimeISO(Temporal.Now.timeZoneId()), 'yyyy-MM-dd-HH'), 'parse start date time')
+  assert.strictEqual(parseDate('yyyy-MM-dd-HH', frequencySpec), format(Temporal.Instant.fromEpochMilliseconds(frequencySpec.next).toZonedDateTimeISO(Temporal.Now.timeZoneId()), 'yyyy-MM-dd-HH'), 'parse next date time')
 })
 
 describe('getFileSize()', () => {

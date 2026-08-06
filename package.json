@@ -24,9 +24,8 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "date-fns": "^4.1.0",
     "sonic-boom": "^4.0.1",
-    "temporal-fmt": "^0.3.2",
+    "temporal-fmt": "0.6.0",
     "temporal-polyfill": "^1.0.3"
   },
   "devDependencies": {

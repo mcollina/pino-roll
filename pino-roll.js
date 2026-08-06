@@ -53,7 +53,7 @@ const {
  * @property {LimitOptions} limit? - strategy used to remove oldest files when rotating them.
  *
  * @property {string} dateFormat? - When specified, appends the current date/time to the file name in the provided format.
- * Supports date formats from `date-fns` (see: https://date-fns.org/v4.1.0/docs/format), such as 'yyyy-MM-dd' and 'yyyy-MM-dd-hh'.
+ * Supports `date-fns` style date formats (see: https://github.com/DirazCoder/temporal-fmt#tokens), such as 'yyyy-MM-dd' and 'yyyy-MM-dd-HH'.
  */
 
 /**
