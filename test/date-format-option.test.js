@@ -24,13 +24,13 @@ beforeEach(() => {
 
 it('rotate file with date format based on frequency', async () => {
   const file = join(logFolder, 'log')
-  const stream = await buildStream({ frequency: 'hourly', file, dateFormat: 'yyyy-MM-dd-hh' })
+  const stream = await buildStream({ frequency: 'hourly', file, dateFormat: 'yyyy-MM-dd-HH' })
   stream.write('logged message #1\n')
   stream.write('logged message #2\n')
   stream.end()
   await once(stream, 'close')
 
-  const fileName = `${file}.${format(Temporal.Now.zonedDateTimeISO(), 'yyyy-MM-dd-hh')}`
+  const fileName = `${file}.${format(Temporal.Now.zonedDateTimeISO(), 'yyyy-MM-dd-HH')}`
   const content = await readFile(`${fileName}.1.log`, 'utf8')
   assert.ok(content.includes('#1'), 'first file contains first log')
   assert.ok(content.includes('#2'), 'first file contains second log')
@@ -52,7 +52,7 @@ it('rotate file based on custom time and date format', async () => {
   const fileName = `${file}.${format(currentDate, 'yyyy-MM-dd-HH')}`
   console.log(`[DEBUG] Filename pattern: ${fileName}, date: ${currentDate.toString()}`)
 
-  const stream = await buildStream({ frequency: 100, file, dateFormat: 'yyyy-MM-dd-hh' })
+  const stream = await buildStream({ frequency: 100, file, dateFormat: 'yyyy-MM-dd-HH' })
   console.log('[DEBUG] Stream created with frequency: 100ms')
 
   console.log('[DEBUG] Writing messages #1 and #2')
@@ -136,9 +136,9 @@ it('rotate file based on custom time and date format', async () => {
 
 it('rotate file based on size and date format', async () => {
   const file = join(logFolder, 'log')
-  const fileWithDate = `${file}.${format(Temporal.Now.zonedDateTimeISO().with({ minute: 0, second: 0, millisecond: 0 }), 'yyyy-MM-dd-hh')}`
+  const fileWithDate = `${file}.${format(Temporal.Now.zonedDateTimeISO().with({ minute: 0, second: 0, millisecond: 0 }), 'yyyy-MM-dd-HH')}`
   const size = 20
-  const stream = await buildStream({ frequency: 'hourly', size: `${size}b`, file, dateFormat: 'yyyy-MM-dd-hh' })
+  const stream = await buildStream({ frequency: 'hourly', size: `${size}b`, file, dateFormat: 'yyyy-MM-dd-HH' })
   stream.write('logged message #1\n')
   stream.write('logged message #2\n')
   await once(stream, 'ready')
@@ -157,9 +157,9 @@ it('rotate file based on size and date format', async () => {
 
 it('rotate file based on size and date format with custom frequency', async () => {
   const file = join(logFolder, 'log')
-  const fileWithDate = `${file}.${format(Temporal.Now.zonedDateTimeISO().with({ minute: 0, second: 0, millisecond: 0 }), 'yyyy-MM-dd-hh')}`
+  const fileWithDate = `${file}.${format(Temporal.Now.zonedDateTimeISO().with({ minute: 0, second: 0, millisecond: 0 }), 'yyyy-MM-dd-HH')}`
   const size = 20
-  const stream = await buildStream({ frequency: 1000, size: `${size}b`, file, dateFormat: 'yyyy-MM-dd-hh' })
+  const stream = await buildStream({ frequency: 1000, size: `${size}b`, file, dateFormat: 'yyyy-MM-dd-HH' })
   stream.write('logged message #1\n')
   stream.write('logged message #2\n')
   await once(stream, 'ready')
@@ -223,7 +223,7 @@ it('rotate file based on size and date format with custom frequency', async () =
 it('rotate file based on size and date format without frequency', async () => {
   const file = join(logFolder, 'log')
   const size = 20
-  const stream = await buildStream({ size: `${size}b`, file, dateFormat: 'yyyy-MM-dd-hh' })
+  const stream = await buildStream({ size: `${size}b`, file, dateFormat: 'yyyy-MM-dd-HH' })
   stream.write('logged message #1\n')
   stream.write('logged message #2\n')
   await once(stream, 'ready')
