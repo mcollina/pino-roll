@@ -25,7 +25,7 @@
   "license": "MIT",
   "dependencies": {
     "sonic-boom": "^4.0.1",
-    "temporal-fmt": "0.6.0",
+    "temporal-fmt": "0.7.3",
     "temporal-polyfill": "^1.0.3"
   },
   "devDependencies": {
