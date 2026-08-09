@@ -5,7 +5,7 @@ const { join } = require('path')
 const { describe, it, beforeEach } = require('node:test')
 const assert = require('node:assert')
 const { format } = require('temporal-fmt')
-const { Temporal } = require('temporal-polyfill')
+const { Temporal } = require('temporal-polyfill/full')
 
 const {
   buildFileName,
