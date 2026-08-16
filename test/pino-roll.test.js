@@ -5,7 +5,8 @@ const { stat, readFile, writeFile, readdir, lstat, readlink } = require('fs/prom
 const { join } = require('path')
 const { it, beforeEach } = require('node:test')
 const assert = require('node:assert')
-const { format } = require('date-fns')
+const { format } = require('temporal-fmt')
+const { Temporal } = require('temporal-polyfill')
 
 const {
   buildStream,
@@ -168,7 +169,7 @@ it('rotate file based on time and parse filename func', async () => {
   const file = join(logFolder, 'log')
   const frequency = 100
 
-  const fileFunc = () => `${file}-${format(new Date(), 'HH-mm-ss')}`
+  const fileFunc = () => `${file}-${format(Temporal.Now.zonedDateTimeISO(), 'HH-mm-ss')}`
   const stream = await buildStream({ frequency, file: fileFunc })
 
   // Write initial messages
@@ -269,17 +270,17 @@ it('remove files based on count', async () => {
 })
 
 it('removeOtherOldFiles()', async () => {
-  const dateFormat = 'HH-mm-ss-S'
+  const dateFormat = 'HH-mm-ss-SSS'
   const notLogFile = 'notLogFile'
   await writeFile(join(logFolder, notLogFile), 'not a log file')
-  let now = new Date()
-  now = new Date(now.getTime() - now.getTime() % 100)
+  let now = Temporal.Now.zonedDateTimeISO()
+  now = Temporal.Instant.fromEpochMilliseconds(now.epochMilliseconds - now.epochMilliseconds % 100).toZonedDateTimeISO(Temporal.Now.timeZoneId()) // new Date(now.getTime() - now.getTime() % 100)
   const file0 = `log.${format(now, dateFormat)}`
   await writeFile(join(logFolder, `${file0}.1`), 'Content log 0.1')
-  const file1 = `log.${format(new Date(now.getTime() + 100), dateFormat)}`
+  const file1 = `log.${format(now.add({ milliseconds: 100 }), dateFormat)}`
   await writeFile(join(logFolder, `${file1}.1`), 'Content log 1.1')
   await writeFile(join(logFolder, `${file1}.2`), 'Content log 1.2')
-  const file2 = `log.${format(new Date(now.getTime() + 200), dateFormat)}`
+  const file2 = `log.${format(now.add({ milliseconds: 200 }), dateFormat)}`
   await writeFile(join(logFolder, `${file2}.1`), 'Content log 2.1')
 
   await removeOldFiles({ baseFile: join(logFolder, 'log'), count: 2, removeOtherLogFiles: true, dateFormat })
@@ -340,8 +341,8 @@ it('remove pre-existing log files when removing files based on count when limit.
   await writeFile(notLogFileName, 'not a log file')
 
   // Create some old log files with timestamps
-  const oldTime1 = new Date(Date.now() - 10000) // 10 seconds ago
-  const oldTime2 = new Date(Date.now() - 5000) // 5 seconds ago
+  const oldTime1 = Temporal.Now.zonedDateTimeISO().subtract({ seconds: 10 })// new Date(Date.now() - 10000) // 10 seconds ago
+  const oldTime2 = Temporal.Now.zonedDateTimeISO().subtract({ seconds: 5 })// new Date(Date.now() - 5000) // 5 seconds ago
   const oldFile1 = `${baseFile}.${format(oldTime1, dateFormat)}.1.log`
   const oldFile2 = `${baseFile}.${format(oldTime2, dateFormat)}.1.log`
 

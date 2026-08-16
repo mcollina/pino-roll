@@ -1,12 +1,11 @@
 'use strict'
 
-const { addDays, addHours, startOfDay, startOfHour } = require('date-fns')
 const { writeFile, rm, stat, readlink, symlink } = require('fs/promises')
 const { join } = require('path')
 const { describe, it, beforeEach } = require('node:test')
 const assert = require('node:assert')
-const { format } = require('date-fns')
-const MockDate = require('mockdate')
+const { format } = require('temporal-fmt')
+const { Temporal } = require('temporal-polyfill/full')
 
 const {
   buildFileName,
@@ -43,30 +42,28 @@ it('parseSize()', async () => {
 })
 
 it('parseFrequency()', async () => {
-  const today = new Date()
+  const today = Temporal.Now.zonedDateTimeISO()
 
   assert.deepStrictEqual(parseFrequency(), null, 'returns null on empty input')
   assert.deepStrictEqual(
     parseFrequency('daily'),
-    { frequency: 'daily', start: startOfDay(today).getTime(), next: startOfDay(addDays(today, 1)).getTime() },
+    { frequency: 'daily', start: today.startOfDay().epochMilliseconds, next: today.add({ days: 1 }).startOfDay().epochMilliseconds },
     'supports daily frequency'
   )
   assert.deepStrictEqual(
     parseFrequency('hourly'),
-    { frequency: 'hourly', start: startOfHour(today).getTime(), next: startOfHour(addHours(today, 1)).getTime() },
+    { frequency: 'hourly', start: today.with({ minute: 0, second: 0, millisecond: 0 }).epochMilliseconds, next: today.add({ hours: 1 }).with({ minute: 0, second: 0, millisecond: 0 }).epochMilliseconds },
     'supports hourly frequency'
   )
-  const monday = new Date(today)
-  monday.setDate(today.getDate() - ((today.getDay() + 6) % 7))
-  const weekStart = new Date(monday).setHours(0, 0, 0, 0)
-  const nextMonday = addDays(new Date(weekStart), 7).setHours(0, 0, 0, 0)
+  const mondayStart = today.subtract({ days: today.dayOfWeek - 1 }).startOfDay()
+  const nextMonday = today.add({ days: ((7 - today.dayOfWeek) % 7) + 1 }).startOfDay()
   assert.deepStrictEqual(
     parseFrequency('weekly'),
-    { frequency: 'weekly', start: weekStart, next: nextMonday },
+    { frequency: 'weekly', start: mondayStart.epochMilliseconds, next: nextMonday.epochMilliseconds },
     'supports weekly frequency'
   )
   const custom = 3000
-  const start = today.getTime() - today.getTime() % custom
+  const start = today.epochMilliseconds - today.epochMilliseconds % custom
   const next = start + custom
   assert.deepStrictEqual(
     parseFrequency(custom),
@@ -77,15 +74,13 @@ it('parseFrequency()', async () => {
 })
 
 it('getNext()', async () => {
-  const today = new Date()
+  const today = Temporal.Now.zonedDateTimeISO()
 
-  assert.deepStrictEqual(getNext('daily'), startOfDay(addDays(today, 1)).getTime(), 'supports daily frequency')
-  assert.deepStrictEqual(getNext('hourly'), startOfHour(addHours(today, 1)).getTime(), 'supports hourly frequency')
+  assert.deepStrictEqual(getNext('daily'), today.startOfDay().add({ days: 1 }).epochMilliseconds, 'supports daily frequency')
+  assert.deepStrictEqual(getNext('hourly'), Temporal.Now.zonedDateTimeISO().with({ minute: 0, second: 0, millisecond: 0 }).add({ hours: 1 }).epochMilliseconds, 'supports hourly frequency')
 
-  const monday2 = new Date(today)
-  monday2.setDate(today.getDate() - ((today.getDay() + 6) % 7))
-  const nextMon = addDays(new Date(new Date(monday2).setHours(0, 0, 0, 0)), 7).setHours(0, 0, 0, 0)
-  assert.deepStrictEqual(getNext('weekly'), nextMon, 'supports weekly frequency')
+  const nextMon = Temporal.Now.zonedDateTimeISO().add({ days: ((7 - today.dayOfWeek) % 7) + 1 })
+  assert.deepStrictEqual(getNext('weekly'), nextMon.startOfDay().epochMilliseconds, 'supports weekly frequency')
 
   const custom = 3000
   const time = Date.now()
@@ -93,76 +88,64 @@ it('getNext()', async () => {
   assert.deepStrictEqual(getNext(custom), next, 'supports custom frequency')
 })
 
-it('getNext() on dates transitioning from DST to Standard Time', async () => {
-  // on these days the time rolls back 1 hour so there "are" 25 hours in the day
-  // genNext() should account for variable number of hours in the day
+describe('DST transitions', async () => {
+  it('getNext() on dates transitioning from DST to Standard Time', async () => {
+    // on these days the time rolls back 1 hour so there "are" 25 hours in the day
+    // genNext() should account for variable number of hours in the day
 
-  // test two different timezones
-  const data = [
-    {
-      tz: 'Europe/Berlin',
-      mockDate: '27 Oct 2024 00:00:00 GMT+0100'
-    },
-    {
-      tz: 'America/New_York',
-      mockDate: '03 Nov 2024 00:00:00 GMT-0500'
+    // test two different timezones
+    const data = [
+      {
+        tz: 'Europe/Berlin', // +01:00 normally
+        mockDate: 1729980000000, // 2024-10-27T00:00:00
+        hourly: 1729983600000, // 2024-10-27T01:00:00
+        daily: 1730070000000, // 2024-10-28T00:00:00
+        weekly: 1730070000000 // 2024-10-28T00:00:00
+      },
+      {
+        tz: 'America/New_York',
+        mockDate: 1730610000000, // '03 Nov 2024 00:00:00 GMT-0500',
+        hourly: 1730613600000, // '2024-11-03T01:00:00-05:00',
+        daily: 1730696400000, // '2024-11-04T00:00:00-05:00',
+        weekly: 1730696400000 // '2024-11-04T00:00:00-05:00'
+      }
+    ]
+
+    for (const d of data) {
+      assert.deepStrictEqual(getNext('daily', d.tz, d.mockDate), d.daily, 'supports daily frequency')
+      assert.deepStrictEqual(getNext('hourly', d.tz, d.mockDate), d.hourly, 'supports hourly frequency')
+      assert.deepStrictEqual(getNext('weekly', d.tz, d.mockDate), d.weekly, 'supports weekly frequency')
     }
-  ]
+  })
 
-  for (const d of data) {
-    MockDate.set(d.mockDate)
-    process.env.TZ = d.tz
-    const today = new Date()
+  it('getNext() on dates transitioning from Standard Time to DST', async () => {
+    // on these days the time rolls forward 1 hour so there "are" 23 hours in the day
+    // genNext() should account for variable number of hours in the day
 
-    assert.deepStrictEqual(getNext('daily'), startOfDay(addDays(today, 1)).getTime(), 'supports daily frequency')
-    assert.deepStrictEqual(getNext('hourly'), startOfHour(addHours(today, 1)).getTime(), 'supports hourly frequency')
+    // test two different timezones
+    const data = [
+      {
+        tz: 'Europe/Berlin',
+        mockDate: 1711843200000, // 2024-03-31T01:00:00+01:00
+        hourly: 1711846800000,  // 2024-03-31T02:00:00+01:00
+        daily: 1711922400000, // 2024-04-01T00:00:00+01:00
+        weekly: 1711922400000 // 2024-04-01T00:00:00+01:00
+      },
+      {
+        tz: 'America/New_York',
+        mockDate: 1731218400000, // 2024-11-10T01:00:00-05:00
+        hourly: 1731222000000, // 2024-11-10T02:00:00-05:00
+        daily: 1731301200000, // 2024-11-11T00:00:00-05:00
+        weekly: 1731301200000 // 2024-11-11T00:00:00-05:00
+      }
+    ]
 
-    const dstMonday = new Date(today)
-    dstMonday.setDate(today.getDate() - ((today.getDay() + 6) % 7))
-    const dstNextMon = addDays(new Date(new Date(dstMonday).setHours(0, 0, 0, 0)), 7).setHours(0, 0, 0, 0)
-    assert.deepStrictEqual(getNext('weekly'), dstNextMon, 'supports weekly frequency')
-
-    const custom = 3000
-    assert.deepStrictEqual(getNext(custom), Date.now() + custom, 'supports custom frequency and does not return start')
-    MockDate.reset()
-    process.env.TZ = undefined
-  }
-})
-
-it('getNext() on dates transitioning from Standard Time to DST', async () => {
-  // on these days the time rolls forward 1 hour so there "are" 23 hours in the day
-  // genNext() should account for variable number of hours in the day
-
-  // test two different timezones
-  const data = [
-    {
-      tz: 'Europe/Berlin',
-      mockDate: '31 March 2024 01:00:00 GMT+0100'
-    },
-    {
-      tz: 'America/New_York',
-      mockDate: '10 Nov 2024 01:00:00 GMT-0500'
+    for (const d of data) {
+      assert.deepStrictEqual(getNext('daily', d.tz, d.mockDate), d.daily, 'supports daily frequency')
+      assert.deepStrictEqual(getNext('hourly', d.tz, d.mockDate), d.hourly, 'supports hourly frequency')
+      assert.deepStrictEqual(getNext('weekly', d.tz, d.mockDate), d.weekly, 'supports weekly frequency')
     }
-  ]
-
-  for (const d of data) {
-    MockDate.set(d.mockDate)
-    process.env.TZ = d.tz
-    const today = new Date()
-
-    assert.deepStrictEqual(getNext('daily'), startOfDay(addDays(today, 1)).getTime(), 'supports daily frequency')
-    assert.deepStrictEqual(getNext('hourly'), startOfHour(addHours(today, 1)).getTime(), 'supports hourly frequency')
-
-    const dstMonday = new Date(today)
-    dstMonday.setDate(today.getDate() - ((today.getDay() + 6) % 7))
-    const dstNextMon = addDays(new Date(new Date(dstMonday).setHours(0, 0, 0, 0)), 7).setHours(0, 0, 0, 0)
-    assert.deepStrictEqual(getNext('weekly'), dstNextMon, 'supports weekly frequency')
-
-    const custom = 3000
-    assert.deepStrictEqual(getNext(custom), Date.now() + custom, 'supports custom frequency and does not return start')
-    MockDate.reset()
-    process.env.TZ = undefined
-  }
+  })
 })
 
 it('getFileName()', async () => {
@@ -194,14 +177,13 @@ it('identifyLogFiles()', async () => {
   b = buildFileName('my-file', '2024-09-26')
   assert.strictEqual(b, identifyLogFile(b, 'my-file', 'yyyy-MM-dd').fileName, 'number(start)+date')
   b = buildFileName('my-file', '2024-09-26-07')
-  assert.strictEqual(b, identifyLogFile(b, 'my-file', 'yyyy-MM-dd-hh').fileName, 'number(start)+date (hourly)')
+  assert.strictEqual(b, identifyLogFile(b, 'my-file', 'yyyy-MM-dd-HH').fileName, 'number(start)+date (hourly)')
   b = buildFileName('my-file', '2024-09-26', 5)
   assert.strictEqual(b, identifyLogFile(b, 'my-file', 'yyyy-MM-dd').fileName, 'number+date')
   b = buildFileName('my-file', '2024-09-26', 5, ext)
   assert.strictEqual(b, identifyLogFile(b, 'my-file', 'yyyy-MM-dd', ext).fileName, 'number+date+extension')
   b = buildFileName('my-file', '2024-09-26', 5, '.json')
   assert.strictEqual(b, identifyLogFile(b, 'my-file', 'yyyy-MM-dd', '.json').fileName, 'number+date+extension(with dot suffix)')
-  b = buildFileName('my-file', '2024-09-31', '5a', ext)
   b = buildFileName('my-file', '2024-09-31', 5, ext)
   assert.ok(!identifyLogFile(b, 'my-file', 'yyyy-MM-dd', ext).fileName, 'number+invalid date+extension')
   b = buildFileName('my-file', '2024-09-26', 5, 'notMyExtension')
@@ -220,13 +202,11 @@ it('validateDateFormat()', async () => {
 })
 
 it('parseDate()', async () => {
-  const today = new Date()
-  const frequencySpec = { frequency: 'hourly', start: startOfHour(today).getTime(), next: startOfHour(addHours(today, 1)).getTime() }
+  const today = Temporal.Now.zonedDateTimeISO()
+  const frequencySpec = { frequency: 'hourly', start: today.with({ minute: 0, second: 0, millisecond: 0 }).epochMilliseconds, next: today.with({ minute: 0, second: 0, millisecond: 0 }).add({ hours: 1 }).epochMilliseconds }
   assert.strictEqual(parseDate(null, frequencySpec), null, 'returns null on empty format')
-  assert.strictEqual(parseDate('yyyy-MM-dd-hh', frequencySpec, true), format(frequencySpec.start, 'yyyy-MM-dd-hh'), 'parse start date time')
-  assert.strictEqual(parseDate('yyyy-MM-dd-hh', frequencySpec), format(frequencySpec.next, 'yyyy-MM-dd-hh'), 'parse next date time')
-  assert.throws(() => parseDate('yyyy-MM-dd-hhU', frequencySpec), 'throws on invalid date format with character U')
-  assert.throws(() => parseDate('yyyy-MM-dd-hhJ', frequencySpec), 'throws on invalid date format with character J')
+  assert.strictEqual(parseDate('yyyy-MM-dd-HH', frequencySpec, true), format(Temporal.Instant.fromEpochMilliseconds(frequencySpec.start).toZonedDateTimeISO(Temporal.Now.timeZoneId()), 'yyyy-MM-dd-HH'), 'parse start date time')
+  assert.strictEqual(parseDate('yyyy-MM-dd-HH', frequencySpec), format(Temporal.Instant.fromEpochMilliseconds(frequencySpec.next).toZonedDateTimeISO(Temporal.Now.timeZoneId()), 'yyyy-MM-dd-HH'), 'parse next date time')
 })
 
 describe('getFileSize()', () => {

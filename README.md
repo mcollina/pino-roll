@@ -176,11 +176,11 @@ You can specify any of [Sonic-Boom options](https://github.com/pinojs/sonic-boom
   - Defines the format for appending the current date/time to the log file name.
   - When specified, appends the date/time in the provided format to the log file name.
   - In order for the date/time to be appended to the log file, the **`frequency`** option should be set.
-  - Supports date formats from `date-fns` (see: [date-fns format documentation](https://date-fns.org/v4.1.0/docs/format)).
+  - Supports `date-fns` style date formats (see: [temporal-fmt format documentation](https://github.com/DirazCoder/temporal-fmt#tokens)).
   - For example:
     - Weekly: `'yyyy-MM-dd'` -> `error.2024-09-23.log` (Monday of that week)
     - Daily: `'yyyy-MM-dd'` -> `error.2024-09-24.log`
-    - Hourly: `'yyyy-MM-dd-hh'` -> `error.2024-09-24-05.log`
+    - Hourly: `'yyyy-MM-dd-HH'` -> `error.2024-09-24-05.log`
 
 ## License
 
