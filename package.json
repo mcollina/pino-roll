@@ -3,6 +3,7 @@
   "version": "4.0.0",
   "description": "A Pino transport that automatically rolls your log files",
   "main": "pino-roll.js",
+  "types": "pino-roll.d.ts",
   "scripts": {
     "dev": "node --test --watch",
     "lint": "eslint",
