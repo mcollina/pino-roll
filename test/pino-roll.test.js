@@ -636,3 +636,13 @@ it('symlink rotates on roll', { skip: process.platform === 'win32' }, async () =
   // Verify symlink points to one of the existing log files
   assert.ok(allFiles.includes(actualFile), 'symlink target should be one of the log files')
 })
+
+it('does not throw when creating symlink in nested directory', { skip: process.platform === 'win32' }, async () => {
+  await assert.doesNotReject(
+    buildStream({
+      file: join(logFolder, 'logs', 'logs', 'log'),
+      mkdir: true,
+      symlink: true,
+    })
+  )
+})
