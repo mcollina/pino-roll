@@ -179,6 +179,14 @@ module.exports = async function ({
   function scheduleRoll () {
     clearTimeout(rollTimeout)
     rollTimeout = setTimeout(() => {
+      const delay = frequencySpec.next - Date.now()
+      if (delay > 0) {
+        rollTimeout = setTimeout(() => {
+          scheduleRoll()
+        }, delay)
+        return
+      }
+
       const prevDate = date
       date = parseDate(dateFormat, frequencySpec)
       if (dateFormat && date && date !== prevDate) number = 0
