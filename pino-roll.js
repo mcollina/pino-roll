@@ -103,7 +103,13 @@ module.exports = async function ({
   const destination = new SonicBoom({ ...opts, dest: fileName })
 
   if (symlink) {
-    createSymlinkSync(fileName)
+    if (opts.sync) {
+      createSymlinkSync(fileName)
+    } else {
+      destination.once('ready', () => {
+        createSymlinkSync(fileName)
+      })
+    }
   }
 
   let rollTimeout
