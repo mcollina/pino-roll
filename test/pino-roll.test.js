@@ -3,9 +3,10 @@
 const { once } = require('events')
 const { stat, readFile, writeFile, readdir, lstat, readlink } = require('fs/promises')
 const { join } = require('path')
-const { it, beforeEach } = require('node:test')
+const { it, beforeEach, mock } = require('node:test')
 const assert = require('node:assert')
 const { format } = require('date-fns')
+const MockDate = require('mockdate')
 
 const {
   buildStream,
@@ -206,6 +207,42 @@ it('rotate file based on time and parse filename func', async () => {
   const files = await readdir(logFolder)
   const logFiles = files.filter(f => f.endsWith('.log'))
   assert.ok(logFiles.length >= 2, `created at least 2 files, got ${logFiles.length}`)
+})
+
+it('should not rotate file before the scheduled time', async () => {
+  try {
+    MockDate.set(0)
+
+    mock.timers.enable({
+      apis: ['setTimeout'],
+    })
+
+    const file = join(logFolder, 'log')
+    const stream = await buildStream({
+      file,
+      frequency: 1000,
+    })
+
+    MockDate.set(500)
+    mock.timers.tick(1000)
+
+    stream.write('logged message #1\n')
+
+    stream.end()
+    await once(stream, 'close')
+
+    const files = await readdir(logFolder)
+    const logFiles = files.filter(f => f.endsWith('.log'))
+    let foundMsg1 = false
+    for (const logFile of logFiles) {
+      const content = await readFile(join(logFolder, logFile), 'utf8')
+      if (content.includes('logged message #1')) foundMsg1 = true
+    }
+    assert.ok(logFiles.length === 1 && foundMsg1, `created only 1 file and message #1 is in the file: file number is ${logFiles.length} and message exists ${foundMsg1}`)
+  } finally {
+    mock.timers.reset()
+    MockDate.reset()
+  }
 })
 
 it('rotate file based on size', async () => {
