@@ -9,10 +9,11 @@ it("options `file` is required", () => {
     expect(build).type.toBeCallableWith({ file: "test.log" })
 })
 
-it("should return a promise with SonicBoom", () => {
+it("accept `SonicBoomOpts` other than `dest`", () => {
+    expect<PinoRollOptions>().type.toBeAssignableTo<Omit<SonicBoomOpts, "dest">>()
+})
+
+it("return a promise with SonicBoom", () => {
     expect(build({ file: "test.log" })).type.toBe<Promise<SonicBoom>>()
 })
 
-it("sonic-boom options except `dest` can pass to pino-roll", () => {
-    expect<Omit<SonicBoomOpts, "dest">>().type.toBeAssignableFrom<PinoRollOptions>()
-})
