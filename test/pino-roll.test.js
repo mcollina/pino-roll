@@ -1,7 +1,7 @@
 'use strict'
 
 const { once } = require('events')
-const { stat, readFile, writeFile, readdir, lstat, readlink } = require('fs/promises')
+const { stat, readFile, writeFile, readdir, lstat, readlink, mkdir } = require('fs/promises')
 const { join } = require('path')
 const { it, beforeEach, mock } = require('node:test')
 const assert = require('node:assert')
@@ -581,6 +581,32 @@ it('creates symlink if prop is set', { skip: process.platform === 'win32' }, asy
   assert.strictEqual(linkTarget, 'log.1.log', 'symlink points to the correct file')
   const content = await readFile(linkPath, 'utf8')
   assert.strictEqual(content, 'test content\n', 'symlink contains correct content')
+})
+
+it('keeps logging when the symlink cannot be updated', { skip: process.platform === 'win32' }, async () => {
+  const file = join(logFolder, 'log')
+  const linkPath = join(logFolder, 'current.log')
+  // A directory at the link path makes symlink() fail, the way a second writer racing for the same
+  // link does.
+  await mkdir(linkPath)
+
+  const warnings = []
+  const onWarning = (warning) => warnings.push(warning)
+  process.on('warning', onWarning)
+  try {
+    const stream = await buildStream({ file, symlink: true })
+    stream.write('test content\n')
+    stream.end()
+    await once(stream, 'close')
+    await sleep(20)
+  } finally {
+    process.off('warning', onWarning)
+  }
+
+  const content = await readFile(join(logFolder, 'log.1.log'), 'utf8')
+  assert.strictEqual(content, 'test content\n', 'the message is written anyway')
+  assert.strictEqual(warnings.length, 1, 'the failure is reported as a warning')
+  assert.match(warnings[0].message, /could not update/, 'the warning says what could not be updated')
 })
 
 it('symlink rotates on roll', { skip: process.platform === 'win32' }, async () => {

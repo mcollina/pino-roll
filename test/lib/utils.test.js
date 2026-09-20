@@ -12,6 +12,7 @@ const {
   buildFileName,
   checkSymlink,
   createSymlink,
+  createSymlinkSync,
   extractFileName,
   getFileSize,
   detectLastNumber,
@@ -404,6 +405,44 @@ describe('createSymlink()', { skip: process.platform === 'win32' }, () => {
   it('given there is already a symlink (should not create symlink)', async () => {
     const fileName = join(folder, 'file1.log')
     assert.strictEqual(false, await createSymlink(fileName), 'returns false when symlink already exists')
+  })
+})
+
+describe('createSymlinkSync()', { skip: process.platform === 'win32' }, () => {
+  let folder
+  beforeEach(() => {
+    folder = createTempTestDir()
+  })
+
+  it('given a new symlink (should create symlink)', async () => {
+    const fileName = join(folder, 'file1.log')
+    const linkPath = join(folder, 'current.log')
+    await writeFile(fileName, 'test content')
+    createSymlinkSync(fileName)
+    const linkTarget = await readlink(linkPath)
+    assert.strictEqual(linkTarget, extractFileName(fileName), 'creates correct symlink')
+  })
+
+  it('given the link cannot be updated (should warn instead of throwing)', async () => {
+    const fileName = join(folder, 'file1.log')
+    const linkPath = join(folder, 'current.log')
+    await writeFile(fileName, 'test content')
+    // checkSymlinkSync only removes a symlink, so any other file at the link path makes symlink()
+    // throw; two writers racing for the link fail the same way.
+    await writeFile(linkPath, 'not a symlink')
+
+    const warnings = []
+    const onWarning = (warning) => warnings.push(warning)
+    process.on('warning', onWarning)
+    try {
+      createSymlinkSync(fileName)
+      await sleep(10)
+    } finally {
+      process.off('warning', onWarning)
+    }
+
+    assert.deepStrictEqual(warnings.length, 1, 'reports the failure as a warning')
+    assert.match(warnings[0].message, /could not update .*current\.log/, 'the warning names the link')
   })
 })
 
