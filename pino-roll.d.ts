@@ -1,9 +1,9 @@
-import type SonicBoom from "sonic-boom";
-import type { SonicBoomOpts } from "sonic-boom";
+import type SonicBoom from 'sonic-boom'
+import type { SonicBoomOpts } from 'sonic-boom'
 
-export type RollFrequency = "weekly" | "daily" | "hourly";
+export type RollFrequency = 'weekly' | 'daily' | 'hourly'
 
-export interface PinoRollOptions extends Omit<SonicBoomOpts, "dest"> {
+export interface PinoRollOptions extends Omit<SonicBoomOpts, 'dest'> {
   file: string | (() => string);
   size?: number | string;
   frequency?: RollFrequency | number;
@@ -16,5 +16,5 @@ export interface PinoRollOptions extends Omit<SonicBoomOpts, "dest"> {
   dateFormat?: string;
 }
 
-declare const PinoRoll: (options: PinoRollOptions) => Promise<SonicBoom>;
-export default PinoRoll;
+declare const PinoRoll: (options: PinoRollOptions) => Promise<SonicBoom>
+export default PinoRoll

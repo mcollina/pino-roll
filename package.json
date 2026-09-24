@@ -7,9 +7,9 @@
   "scripts": {
     "dev": "node --test --watch",
     "lint": "eslint",
-    "test": "eslint && node --test --test-concurrency=1",
-    "test-only": "node --test --test-concurrency=1",
-    "test-ci": "c8 --reporter=lcovonly node --test --test-concurrency=1"
+    "test": "eslint && node --test --test-concurrency=1 && tstyche",
+    "test-only": "node --test --test-concurrency=1 && tstyche",
+    "test-ci": "c8 --reporter=lcovonly node --test --test-concurrency=1 && tstyche"
   },
   "repository": {
     "type": "git",
