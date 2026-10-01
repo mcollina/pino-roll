@@ -513,7 +513,7 @@ it('throw on unexisting folder without mkdir', async () => {
     (err) => {
       // Check that it's an ENOENT error for the expected file
       return err.message.includes('ENOENT: no such file or directory, open') &&
-             err.message.includes(`${file}.1.log`)
+        err.message.includes(`${file}.1.log`)
     },
     'throws on unexisting folder'
   )
@@ -532,9 +532,7 @@ it('throw on unparseable frequency', async () => {
   const frequency = 'unparseable'
   await assert.rejects(
     buildStream({ file: join(logFolder, 'log'), frequency }),
-    {
-      message: `${frequency} is neither a supported frequency or a number of milliseconds`
-    },
+    { message: `${frequency} is neither a supported frequency or a number of milliseconds` },
     'throws on unparseable frequency'
   )
 })
@@ -542,9 +540,7 @@ it('throw on unparseable frequency', async () => {
 it('throw on unparseable limit object', async () => {
   await assert.rejects(
     buildStream({ file: join(logFolder, 'log'), limit: 10 }),
-    {
-      message: 'limit must be an object'
-    },
+    { message: 'limit must be an object' },
     'throws on limit option not being an object'
   )
 })
@@ -552,9 +548,7 @@ it('throw on unparseable limit object', async () => {
 it('throw when limit.count is not a number', async () => {
   await assert.rejects(
     buildStream({ file: join(logFolder, 'log'), limit: { count: true } }),
-    {
-      message: 'limit.count must be a number greater than 0'
-    },
+    { message: 'limit.count must be a number greater than 0' },
     'throws on limit.count not being a number'
   )
 })
@@ -562,11 +556,39 @@ it('throw when limit.count is not a number', async () => {
 it('throw when limit.count is 0', async () => {
   await assert.rejects(
     buildStream({ file: join(logFolder, 'log'), limit: { count: 0 } }),
-    {
-      message: 'limit.count must be a number greater than 0'
-    },
+    { message: 'limit.count must be a number greater than 0' },
     'throws on limit.count being 0'
   )
+})
+
+it('uses the specified extension', async () => {
+  const cases = [
+    { file: 'test', extension: undefined, start: 'test', end: '.log' },
+    { file: 'test.txt', extension: undefined, start: 'test', end: '.txt' },
+    { file: 'test', extension: 'txt', start: 'test', end: '.txt' },
+    { file: 'test.log', extension: 'txt', start: 'test', end: '.txt' },
+    { file: 'test', extension: '.txt', start: 'test', end: '.txt' },
+    { file: 'test.log', extension: '.txt', start: 'test', end: '.txt' },
+  ]
+
+  const frequency = 100
+
+  for (const cs of cases) {
+    logFolder = createTempTestDir()
+
+    const file = join(logFolder, cs.file)
+    const extension = cs.extension
+    const stream = await buildStream({ file, frequency, extension })
+
+    stream.write('logged message #1\n')
+    await sleep(1000)
+    stream.write('logged message #2\n')
+    stream.end()
+
+    const files = await readdir(logFolder)
+    const logFiles = files.filter(f => (f.startsWith(cs.start) && f.endsWith(cs.end)))
+    assert.ok(logFiles.length >= 2, `created at least 2 files, got ${logFiles.length} at case { file=${cs.file}, extension=${cs.extension} }`)
+  }
 })
 
 it('creates symlink if prop is set', { skip: process.platform === 'win32' }, async () => {

@@ -90,7 +90,7 @@ module.exports = async function ({
   const frequencySpec = parseFrequency(frequency)
 
   let date = parseDate(dateFormat, frequencySpec, true)
-  const sanitizedFile = sanitizeFile(file)
+  const sanitizedFile = sanitizeFile(file, extension)
   file = sanitizedFile.file
   extension = sanitizedFile.extension
 
